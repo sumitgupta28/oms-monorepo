@@ -1,0 +1,37 @@
+# Environment — never commit secrets
+.env
+
+# Gradle
+.gradle/
+build/
+*/build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# IntelliJ
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# Java
+*.class
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
+
+# Node / React
+node_modules/
+react-ui/dist/
+react-ui/.env.local
+react-ui/.env.production
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Docker volumes (if mapped locally)
+docker-volumes/

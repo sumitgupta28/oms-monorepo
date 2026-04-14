@@ -1,0 +1,26 @@
+server:
+  port: 8085
+spring:
+  application:
+    name: agent-service
+  ai:
+    anthropic:
+      api-key: ${ANTHROPIC_API_KEY}
+      chat:
+        model: claude-sonnet-4-6
+        max-tokens: 4096
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER:http://localhost:8180/realms/oms}
+services:
+  order-url:     ${ORDER_SERVICE_URL:http://order-service:8081}
+  payment-url:   ${PAYMENT_SERVICE_URL:http://payment-service:8082}
+  inventory-url: ${INVENTORY_SERVICE_URL:http://inventory-service:8083}
+  product-url:   ${PRODUCT_SERVICE_URL:http://product-service:8084}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus,metrics

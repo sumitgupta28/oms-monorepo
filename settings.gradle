@@ -1,0 +1,13 @@
+rootProject.name = 'oms-monorepo'
+
+include 'shared-events'
+include 'gateway'
+include 'agent-service'
+include 'order-service'
+include 'payment-service'
+include 'inventory-service'
+include 'product-service'
+include 'notification-service'
+
+// Frontend (managed separately via npm, but tracked here)
+// include 'react-ui'
