@@ -13,6 +13,8 @@ dependencies {
     implementation 'io.micrometer:micrometer-registry-prometheus'
     implementation 'io.github.resilience4j:resilience4j-spring-boot3:2.2.0'
     runtimeOnly    'org.postgresql:postgresql'
+    implementation 'org.flywaydb:flyway-core'
+    runtimeOnly    'org.flywaydb:flyway-database-postgresql'
     testImplementation 'org.testcontainers:postgresql'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
 
