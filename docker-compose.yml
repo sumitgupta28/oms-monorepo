@@ -1,4 +1,10 @@
-version: '3.9'
+# ─────────────────────────────────────────────────────────────────────────────
+# OMS — All-in-one compose file (infra + apps together).
+#
+# For independent lifecycle control use the split files instead:
+#   docker compose -f docker-compose.infra.yml up -d   # databases, Kafka, Keycloak
+#   docker compose -f docker-compose.apps.yml up -d    # Spring Boot services + UI
+# ─────────────────────────────────────────────────────────────────────────────
 
 # ─── Networks ─────────────────────────────────────────────────────────────────
 networks:
@@ -315,25 +321,31 @@ services:
     image: apache/kafka:latest
     container_name: kafka
     ports:
-      - "9092:9092"
+      # 9094 exposed for host-side tools (kcat, Kafdrop running on host, etc.)
+      # Services inside Docker use INTERNAL listener kafka:9092 directly.
+      - "9094:9094"
     environment:
-      # Required KRaft Settings
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
-      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_LISTENERS: INTERNAL://0.0.0.0:9092,EXTERNAL://0.0.0.0:9094,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:9092,EXTERNAL://localhost:9094
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
-      # Cluster ID is required for KRaft; generate one or use a static one for dev
       CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk'
-      # Replication factors for single-node dev
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
     networks:
       - oms-network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-broker-api-versions.sh --bootstrap-server localhost:9094 > /dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
 
 
   # ════════════════════════════════════════════════════════

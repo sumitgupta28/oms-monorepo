@@ -1,0 +1,246 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# OMS — Application services
+#
+# Requires the infra stack to be running first:
+#   docker compose -f docker-compose.infra.yml up -d
+#
+# Usage:
+#   docker compose -f docker-compose.apps.yml up -d        # start all apps
+#   docker compose -f docker-compose.apps.yml up -d \
+#     order-service payment-service                        # start selected apps
+#   docker compose -f docker-compose.apps.yml down         # stop apps only
+#   docker compose -f docker-compose.apps.yml build        # rebuild all images
+#
+# Environment:
+#   Copy .env.example → .env and set ANTHROPIC_API_KEY before starting.
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: oms-apps
+
+# ─── Join the network created by the infra stack ─────────────────────────────
+networks:
+  oms-network:
+    external: true
+
+services:
+
+  # ══════════════════════════════════════════════════════════
+  # API GATEWAY  — single external entry point (port 8080)
+  # ══════════════════════════════════════════════════════════
+  gateway:
+    build:
+      context: ./gateway
+      dockerfile: Dockerfile
+    container_name: gateway
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-local}
+      KEYCLOAK_URL: http://keycloak:8080
+      KEYCLOAK_REALM: oms
+      ORDER_SERVICE_URI: http://order-service:8081
+      PAYMENT_SERVICE_URI: http://payment-service:8082
+      INVENTORY_SERVICE_URI: http://inventory-service:8083
+      PRODUCT_SERVICE_URI: http://product-service:8084
+      AGENT_SERVICE_URI: http://agent-service:8085
+    networks:
+      - oms-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ══════════════════════════════════════════════════════════
+  # ORDER SERVICE
+  # ══════════════════════════════════════════════════════════
+  order-service:
+    build:
+      context: ./order-service
+      dockerfile: Dockerfile
+    container_name: order-service
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-local}
+      SERVER_PORT: 8081
+      KEYCLOAK_ISSUER: http://keycloak:8080/realms/oms
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/orders
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    networks:
+      - oms-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8081/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ══════════════════════════════════════════════════════════
+  # PAYMENT SERVICE
+  # ══════════════════════════════════════════════════════════
+  payment-service:
+    build:
+      context: ./payment-service
+      dockerfile: Dockerfile
+    container_name: payment-service
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-local}
+      SERVER_PORT: 8082
+      KEYCLOAK_ISSUER: http://keycloak:8080/realms/oms
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/payments
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      MOCK_PAYMENT_FAILURE_RATE: ${MOCK_PAYMENT_FAILURE_RATE:-0.1}
+      MOCK_PAYMENT_DELAY_MS: ${MOCK_PAYMENT_DELAY_MS:-1000}
+    networks:
+      - oms-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8082/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ══════════════════════════════════════════════════════════
+  # INVENTORY SERVICE
+  # ══════════════════════════════════════════════════════════
+  inventory-service:
+    build:
+      context: ./inventory-service
+      dockerfile: Dockerfile
+    container_name: inventory-service
+    ports:
+      - "8083:8083"
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-local}
+      SERVER_PORT: 8083
+      KEYCLOAK_ISSUER: http://keycloak:8080/realms/oms
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/inventory
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      INVENTORY_LOW_STOCK_THRESHOLD: ${INVENTORY_LOW_STOCK_THRESHOLD:-5}
+    networks:
+      - oms-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8083/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ══════════════════════════════════════════════════════════
+  # PRODUCT SERVICE  (MongoDB + pgvector + AI embeddings)
+  # ══════════════════════════════════════════════════════════
+  product-service:
+    build:
+      context: ./product-service
+      dockerfile: Dockerfile
+    container_name: product-service
+    ports:
+      - "8084:8084"
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-local}
+      SERVER_PORT: 8084
+      KEYCLOAK_ISSUER: http://keycloak:8080/realms/oms
+      SPRING_DATA_MONGODB_URI: mongodb://mongodb:27017/products
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/products
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    networks:
+      - oms-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8084/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ══════════════════════════════════════════════════════════
+  # NOTIFICATION SERVICE
+  # ══════════════════════════════════════════════════════════
+  notification-service:
+    build:
+      context: ./notification-service
+      dockerfile: Dockerfile
+    container_name: notification-service
+    ports:
+      - "8086:8086"
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-local}
+      SERVER_PORT: 8086
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      NOTIFICATION_FROM_EMAIL: ${NOTIFICATION_FROM_EMAIL:-noreply@oms.com}
+    networks:
+      - oms-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8086/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ══════════════════════════════════════════════════════════
+  # AI AGENT SERVICE  (Spring AI + Claude + Redis memory)
+  # ══════════════════════════════════════════════════════════
+  agent-service:
+    build:
+      context: ./agent-service
+      dockerfile: Dockerfile
+    container_name: agent-service
+    ports:
+      - "8085:8085"
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-local}
+      SERVER_PORT: 8085
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      KEYCLOAK_ISSUER: http://keycloak:8080/realms/oms
+      ORDER_SERVICE_URL: http://order-service:8081
+      PAYMENT_SERVICE_URL: http://payment-service:8082
+      INVENTORY_SERVICE_URL: http://inventory-service:8083
+      PRODUCT_SERVICE_URL: http://product-service:8084
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+    networks:
+      - oms-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8085/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ══════════════════════════════════════════════════════════
+  # REACT FRONTEND
+  # ══════════════════════════════════════════════════════════
+  react-ui:
+    build:
+      context: ./react-ui
+      dockerfile: Dockerfile
+    container_name: react-ui
+    ports:
+      - "3000:3000"
+    environment:
+      REACT_APP_KEYCLOAK_URL: http://localhost:8180
+      REACT_APP_KEYCLOAK_REALM: oms
+      REACT_APP_KEYCLOAK_CLIENT_ID: react-ui
+      REACT_APP_GATEWAY_URL: http://localhost:8080
+    networks:
+      - oms-network
+    restart: unless-stopped
