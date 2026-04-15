@@ -1,6 +1,7 @@
 package com.oms.product.controller;
 
 import com.oms.product.service.*;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -30,13 +31,13 @@ public class ProductController {
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ProductResponse> create(@RequestBody CreateProductRequest req) {
+    public ResponseEntity<ProductResponse> create(@Valid @RequestBody CreateProductRequest req) {
         return ResponseEntity.status(HttpStatus.CREATED).body(productService.create(req));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ProductResponse update(@PathVariable String id, @RequestBody UpdateProductRequest req) {
+    public ProductResponse update(@PathVariable String id, @Valid @RequestBody UpdateProductRequest req) {
         return productService.update(id, req);
     }
 

@@ -3,6 +3,7 @@ package com.oms.payment.controller;
 import com.oms.payment.service.InitiatePaymentRequest;
 import com.oms.payment.service.PaymentResponse;
 import com.oms.payment.service.PaymentService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -23,7 +24,7 @@ public class PaymentController {
     @PostMapping
     @PreAuthorize("hasRole('CUSTOMER') or hasRole('ADMIN')")
     public ResponseEntity<PaymentResponse> initiatePayment(
-        @RequestBody InitiatePaymentRequest request,
+        @Valid @RequestBody InitiatePaymentRequest request,
         @RequestHeader("Idempotency-Key") String idempotencyKey,
         @AuthenticationPrincipal Jwt jwt
     ) {

@@ -24,6 +24,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor
@@ -173,7 +174,7 @@ public class OrderService {
         outboxRepository.findByPublishedFalseOrderByCreatedAtAsc()
             .forEach(event -> {
                 try {
-                    kafkaTemplate.send(event.getTopic(), event.getPayload());
+                    kafkaTemplate.send(event.getTopic(), event.getPayload()).get(5, TimeUnit.SECONDS);
                     event.setPublished(true);
                     event.setPublishedAt(Instant.now());
                     outboxRepository.save(event);

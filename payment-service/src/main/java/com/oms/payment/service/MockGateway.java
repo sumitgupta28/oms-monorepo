@@ -4,7 +4,7 @@ import lombok.Getter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 @Component
 @Getter
@@ -16,9 +16,7 @@ public class MockGateway {
     @Value("${mock.payment.delay-ms:1000}")
     private long delayMs;
 
-    private final Random random = new Random();
-
     public boolean process() {
-        return random.nextDouble() >= failureRate;
+        return ThreadLocalRandom.current().nextDouble() >= failureRate;
     }
 }

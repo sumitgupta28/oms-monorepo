@@ -55,8 +55,7 @@ public class PaymentService {
     }
 
     private void processAsync(Payment payment) {
-        // Simulate async processing
-        new Thread(() -> {
+        Thread.ofVirtual().start(() -> {
             try {
                 Thread.sleep(mockGateway.getDelayMs());
                 boolean success = mockGateway.process();
@@ -64,7 +63,7 @@ public class PaymentService {
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
-        }).start();
+        });
     }
 
     @Transactional
@@ -108,10 +107,10 @@ public class PaymentService {
     @Transactional
     public PaymentResponse refund(UUID paymentId) {
         Payment payment = paymentRepository.findById(paymentId)
-            .orElseThrow(() -> new RuntimeException("Payment not found: " + paymentId));
+            .orElseThrow(() -> new com.oms.payment.exception.PaymentNotFoundException("Payment not found: " + paymentId));
 
         if (payment.getStatus() != PaymentStatus.CONFIRMED) {
-            throw new RuntimeException("Only CONFIRMED payments can be refunded");
+            throw new com.oms.payment.exception.PaymentStateException("Only CONFIRMED payments can be refunded");
         }
 
         payment.setStatus(PaymentStatus.REFUNDED);
@@ -128,10 +127,11 @@ public class PaymentService {
         return PaymentResponse.from(payment);
     }
 
+    @Transactional(readOnly = true)
     public PaymentResponse getStatus(UUID paymentId) {
         return paymentRepository.findById(paymentId)
             .map(PaymentResponse::from)
-            .orElseThrow(() -> new RuntimeException("Payment not found: " + paymentId));
+            .orElseThrow(() -> new com.oms.payment.exception.PaymentNotFoundException("Payment not found: " + paymentId));
     }
 
     private void publishEvent(String topic, Map<String, String> payload) {

@@ -12,8 +12,6 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Service @RequiredArgsConstructor @Slf4j
 public class ProductService {
@@ -62,10 +60,10 @@ public class ProductService {
     public SearchResponse semanticSearch(String query) {
         List<String> productIds = embeddingService.semanticSearch(query, 5);
         List<ProductResponse> results = productIds.stream()
-            .map(pid -> productRepo.findById(pid))
-            .filter(Optional::isPresent)
-            .map(opt -> ProductResponse.from(opt.get()))
-            .collect(Collectors.toList());
+            .map(productRepo::findById)
+            .flatMap(java.util.Optional::stream)
+            .map(ProductResponse::from)
+            .toList();
         if (results.isEmpty()) {
             results = productRepo.searchByKeyword(query).stream()
                 .map(ProductResponse::from).toList();

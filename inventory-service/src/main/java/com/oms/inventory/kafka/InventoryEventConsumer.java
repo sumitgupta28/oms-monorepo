@@ -27,7 +27,7 @@ public class InventoryEventConsumer {
             n.get("items").forEach(i -> items.add(
                 new ReserveItem(i.get("productId").asText(), i.get("quantity").asInt())));
             inventoryService.reserveStock(orderId, items);
-        } catch (Exception e) { log.error("Error processing OrderPlacedEvent: {}", e.getMessage()); }
+        } catch (Exception e) { log.error("Error processing OrderPlacedEvent: {}", e.getMessage(), e); }
     }
 
     @KafkaListener(topics="oms.orders.cancelled", groupId="oms-inventory-group")
@@ -35,8 +35,8 @@ public class InventoryEventConsumer {
         try {
             JsonNode n = objectMapper.readTree(payload);
             UUID orderId = UUID.fromString(n.get("orderId").asText());
-            // Release all reserved items for this order
-            log.info("Order cancelled - releasing inventory for order {}", orderId);
-        } catch (Exception e) { log.error("Error processing OrderCancelledEvent: {}", e.getMessage()); }
+            inventoryService.releaseStockByOrderId(orderId);
+            log.info("Inventory released for cancelled order {}", orderId);
+        } catch (Exception e) { log.error("Error processing OrderCancelledEvent: {}", e.getMessage(), e); }
     }
 }

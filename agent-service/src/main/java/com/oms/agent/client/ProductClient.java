@@ -43,17 +43,4 @@ public class ProductClient {
         }
     }
 
-    public String checkInventory(String productId) {
-        log.info("checkInventory: productId={}", productId);
-        try {
-            // Note: Inventory is handled by inventory-service (port 8083), not product-service
-            // This should be refactored to call inventory-service directly
-            var response = restTemplate.getForObject(
-                productUrl.replace("8084", "8083") + "/inventory/" + productId, Object.class);
-            return objectMapper.writeValueAsString(response);
-        } catch (Exception e) {
-            log.error("checkInventory failed for product {}: {}", productId, e.getMessage(), e);
-            throw new AgentToolException("checkInventory", "Inventory check failed", e);
-        }
-    }
 }

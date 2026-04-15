@@ -1,4 +1,8 @@
 package com.oms.order.service;
 
-public record CancelOrderRequest(String reason) {}
+import jakarta.validation.constraints.NotBlank;
 
+public record CancelOrderRequest(
+    @NotBlank(message = "Cancellation reason is required")
+    String reason
+) {}

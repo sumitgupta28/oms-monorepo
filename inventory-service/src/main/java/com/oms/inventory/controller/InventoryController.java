@@ -4,6 +4,7 @@ import com.oms.inventory.service.AdjustStockRequest;
 import com.oms.inventory.service.InventoryResponse;
 import com.oms.inventory.service.InventoryService;
 import com.oms.inventory.service.SetStockRequest;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -25,13 +26,13 @@ public class InventoryController {
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public InventoryResponse setStock(@RequestBody SetStockRequest req) {
+    public InventoryResponse setStock(@Valid @RequestBody SetStockRequest req) {
         return inventoryService.setStock(req.productId(), req.quantity());
     }
 
     @PatchMapping("/{productId}/adjust")
     @PreAuthorize("hasRole('ADMIN')")
-    public InventoryResponse adjust(@PathVariable String productId, @RequestBody AdjustStockRequest req) {
+    public InventoryResponse adjust(@PathVariable String productId, @Valid @RequestBody AdjustStockRequest req) {
         return inventoryService.adjustStock(productId, req.delta());
     }
 }
