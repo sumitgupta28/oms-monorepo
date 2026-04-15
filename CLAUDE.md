@@ -22,11 +22,33 @@ npm test           # Run tests
 ```
 
 ### Infrastructure
+Two compose files let you manage infra and apps independently:
+
 ```bash
-docker compose up -d          # Start all infrastructure + services
-docker compose ps             # Check status
-docker compose down -v        # Full teardown including volumes
+# ── Infrastructure (PostgreSQL, MongoDB, Redis, Kafka, Keycloak, Prometheus, Grafana)
+docker compose -f docker-compose.infra.yml up -d       # start infra
+docker compose -f docker-compose.infra.yml down        # stop infra (keeps volumes)
+docker compose -f docker-compose.infra.yml down -v     # full teardown including volumes
+
+# ── Applications (Spring Boot services + React UI)
+docker compose -f docker-compose.apps.yml up -d        # start all apps
+docker compose -f docker-compose.apps.yml up -d order-service payment-service  # start selected
+docker compose -f docker-compose.apps.yml down         # stop apps only
+docker compose -f docker-compose.apps.yml build        # rebuild all app images
+
+# ── All-in-one (original, kept for convenience)
+docker compose up -d          # start everything together
+docker compose ps             # check status
+docker compose down -v        # full teardown
+
+# ── Status / logs
+docker compose -f docker-compose.infra.yml ps
+docker compose -f docker-compose.apps.yml ps
+docker compose -f docker-compose.apps.yml logs -f order-service
 ```
+
+> **Note:** `docker-compose.apps.yml` joins the `oms-network` created by the infra stack
+> as an external network. Always start infra before apps.
 
 ### Environment Setup
 Copy `.env.example` to `.env` and set `ANTHROPIC_API_KEY` before starting Docker Compose.
