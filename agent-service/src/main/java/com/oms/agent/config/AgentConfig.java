@@ -17,11 +17,6 @@ import org.springframework.web.client.RestTemplate;
 public class AgentConfig {
 
     @Bean
-    public RestTemplate restTemplate() {
-        return new RestTemplate();
-    }
-
-    @Bean
     public ChatMemory chatMemory() {
         return MessageWindowChatMemory.builder()
                 .maxMessages(10)

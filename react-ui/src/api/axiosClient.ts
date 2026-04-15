@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const api = axios.create({ baseURL: process.env.REACT_APP_GATEWAY_URL });
+const api = axios.create({ baseURL: import.meta.env.VITE_GATEWAY_URL });
 
 api.interceptors.request.use(config => {
   const token = localStorage.getItem("access_token");

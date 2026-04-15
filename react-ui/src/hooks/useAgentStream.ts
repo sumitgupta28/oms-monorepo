@@ -17,7 +17,7 @@ export function useAgentStream() {
     setStreaming(true);
     setToolCalls([]);
 
-    const url = `${process.env.REACT_APP_GATEWAY_URL}/api/chat/stream?message=${encodeURIComponent(text)}&sessionId=${sessionId}&token=${token}`;
+    const url = `${import.meta.env.VITE_GATEWAY_URL}/api/chat/stream?message=${encodeURIComponent(text)}&sessionId=${sessionId}&token=${token}`;
     const es = new EventSource(url);
     esRef.current = es;
 

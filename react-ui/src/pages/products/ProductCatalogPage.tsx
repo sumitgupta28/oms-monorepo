@@ -65,8 +65,8 @@ export default function ProductCatalogPage() {
         </div>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {data?.content.map(p=><ProductCard key={p.id} product={p}/>)}
-          {!data?.content.length && <p className="col-span-4 text-center text-gray-400 py-12">No products found.</p>}
+          {data?.content?.map(p=><ProductCard key={p.id} product={p}/>)}
+          {!data?.content?.length && <p className="col-span-4 text-center text-gray-400 py-12">No products found.</p>}
         </div>
       )}
     </div>

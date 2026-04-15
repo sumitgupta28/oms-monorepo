@@ -1,5 +1,5 @@
-const KC_BASE = `${process.env.REACT_APP_KEYCLOAK_URL}/realms/${process.env.REACT_APP_KEYCLOAK_REALM}`;
-const CLIENT_ID = process.env.REACT_APP_KEYCLOAK_CLIENT_ID!;
+const KC_BASE = `${import.meta.env.VITE_KEYCLOAK_URL}/realms/${import.meta.env.VITE_KEYCLOAK_REALM}`;
+const CLIENT_ID = import.meta.env.VITE_KEYCLOAK_CLIENT_ID;
 
 export interface TokenResponse {
   access_token: string;
@@ -28,7 +28,7 @@ export async function registerUser(data: {
 }): Promise<void> {
   const adminToken = await getAdminToken();
   const res = await fetch(
-    `${process.env.REACT_APP_KEYCLOAK_URL}/admin/realms/${process.env.REACT_APP_KEYCLOAK_REALM}/users`,
+    `${import.meta.env.VITE_KEYCLOAK_URL}/admin/realms/${import.meta.env.VITE_KEYCLOAK_REALM}/users`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminToken}` },

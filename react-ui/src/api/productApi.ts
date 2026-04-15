@@ -4,7 +4,7 @@ import axios from "axios";
 export interface Product { id: string; name: string; description: string; category: string; price: number; stockQty: number; imageUrl?: string; }
 export interface ProductPage { content: Product[]; totalElements: number; totalPages: number; }
 
-const PUBLIC_BASE = process.env.REACT_APP_GATEWAY_URL;
+const PUBLIC_BASE = import.meta.env.VITE_GATEWAY_URL;
 
 export const productApi = {
   getAll: (page = 0, size = 20) =>
