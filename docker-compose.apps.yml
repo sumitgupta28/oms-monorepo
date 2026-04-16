@@ -21,6 +21,7 @@ name: oms-apps
 networks:
   oms-network:
     external: true
+    name: oms-network
 
 services:
 

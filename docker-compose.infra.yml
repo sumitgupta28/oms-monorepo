@@ -16,6 +16,7 @@ name: oms-infra
 networks:
   oms-network:
     driver: bridge
+    name: oms-network
 
 # ─── Persistent volumes ───────────────────────────────────────────────────────
 volumes:

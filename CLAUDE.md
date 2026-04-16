@@ -32,6 +32,7 @@ docker compose -f docker-compose.infra.yml down -v     # full teardown including
 
 # ── Applications (Spring Boot services + React UI)
 docker compose -f docker-compose.apps.yml up -d        # start all apps
+docker compose -f docker-compose.apps.yml up -d gateway order-service
 docker compose -f docker-compose.apps.yml up -d order-service payment-service  # start selected
 docker compose -f docker-compose.apps.yml down         # stop apps only
 docker compose -f docker-compose.apps.yml build        # rebuild all app images
