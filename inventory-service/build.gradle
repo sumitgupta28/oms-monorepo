@@ -17,4 +17,7 @@ dependencies {
     implementation 'org.flywaydb:flyway-core'
     runtimeOnly    'org.flywaydb:flyway-database-postgresql'
     testImplementation 'org.testcontainers:postgresql'
+    testImplementation 'org.testcontainers:junit-jupiter'
+    testImplementation 'org.springframework.security:spring-security-test'
+    testImplementation 'org.springframework.kafka:spring-kafka-test'
 }
