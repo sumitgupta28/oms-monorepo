@@ -1,6 +1,8 @@
 package com.oms.payment.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.oms.events.PaymentConfirmedEvent;
+import com.oms.events.PaymentFailedEvent;
 import com.oms.payment.domain.Payment;
 import com.oms.payment.domain.PaymentLedger;
 import com.oms.payment.domain.PaymentStatus;
@@ -14,7 +16,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -81,12 +82,8 @@ public class PaymentService {
                     .amount(payment.getAmount())
                     .build());
 
-                publishEvent(TOPIC_CONFIRMED, Map.of(
-                    "eventType", "PAYMENT_CONFIRMED",
-                    "paymentId", payment.getId().toString(),
-                    "orderId",   payment.getOrderId().toString(),
-                    "amount",    payment.getAmount().toString()
-                ));
+                publishEvent(TOPIC_CONFIRMED,
+                    new PaymentConfirmedEvent(payment.getId(), payment.getOrderId(), payment.getAmount()));
                 log.info("Payment confirmed: {}", paymentId);
             } else {
                 payment.setStatus(PaymentStatus.FAILED);
@@ -94,11 +91,8 @@ public class PaymentService {
                 payment.setProcessedAt(Instant.now());
                 paymentRepository.save(payment);
 
-                publishEvent(TOPIC_FAILED, Map.of(
-                    "eventType", "PAYMENT_FAILED",
-                    "orderId",   payment.getOrderId().toString(),
-                    "reason",    "Mock gateway rejection"
-                ));
+                publishEvent(TOPIC_FAILED,
+                    new PaymentFailedEvent(payment.getOrderId(), "Mock gateway rejection"));
                 log.warn("Payment failed: {}", paymentId);
             }
         });
@@ -134,11 +128,12 @@ public class PaymentService {
             .orElseThrow(() -> new com.oms.payment.exception.PaymentNotFoundException("Payment not found: " + paymentId));
     }
 
-    private void publishEvent(String topic, Map<String, String> payload) {
+    private void publishEvent(String topic, Object event) {
         try {
-            kafkaTemplate.send(topic, objectMapper.writeValueAsString(payload));
+            kafkaTemplate.send(topic, objectMapper.writeValueAsString(event));
         } catch (Exception e) {
-            log.error("Failed to publish to {}: {}", topic, e.getMessage());
+            log.error("Failed to publish to {}: {}", topic, e.getMessage(), e);
+            throw new RuntimeException("Kafka publish failed for topic " + topic, e);
         }
     }
 }

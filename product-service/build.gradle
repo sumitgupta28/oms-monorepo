@@ -25,6 +25,7 @@ dependencies {
     testImplementation 'org.testcontainers:mongodb'
     testImplementation 'org.testcontainers:postgresql'
 
-    implementation 'org.springframework.kafka:spring-kafka:3.3.13' // Replace with latest version
+    implementation 'org.springframework.kafka:spring-kafka'
+    implementation project(':shared-events')
 
 }

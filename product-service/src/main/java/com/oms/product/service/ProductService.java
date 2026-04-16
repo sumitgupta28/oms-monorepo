@@ -1,5 +1,7 @@
 package com.oms.product.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.oms.events.ProductUpdatedEvent;
 import com.oms.product.domain.Product;
 import com.oms.product.exception.ProductNotFoundException;
 import com.oms.product.repository.ProductRepository;
@@ -18,6 +20,7 @@ public class ProductService {
     private final ProductRepository productRepo;
     private final EmbeddingService  embeddingService;
     private final KafkaTemplate<String,String> kafka;
+    private final ObjectMapper objectMapper;
 
     public Page<ProductResponse> getAll(Pageable pageable) {
         return productRepo.findByActiveTrue(pageable).map(ProductResponse::from);
@@ -45,8 +48,13 @@ public class ProductService {
         p.setUpdatedAt(Instant.now());
         Product saved = productRepo.save(p);
         embeddingService.embedProduct(saved);
-        kafka.send("oms.products.updated",
-            "{\"productId\":\""+id+"\",\"name\":\""+req.name()+"\"}");
+        try {
+            kafka.send("oms.products.updated",
+                objectMapper.writeValueAsString(
+                    new ProductUpdatedEvent(id, req.name(), req.description())));
+        } catch (Exception e) {
+            log.warn("Failed to publish product.updated event for {}: {}", id, e.getMessage(), e);
+        }
         return ProductResponse.from(saved);
     }
 

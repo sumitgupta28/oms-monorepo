@@ -39,4 +39,14 @@ public class InventoryEventConsumer {
             log.info("Inventory released for cancelled order {}", orderId);
         } catch (Exception e) { log.error("Error processing OrderCancelledEvent: {}", e.getMessage(), e); }
     }
+
+    @KafkaListener(topics="oms.payment.failed", groupId="oms-inventory-group")
+    public void onPaymentFailed(String payload) {
+        try {
+            JsonNode n = objectMapper.readTree(payload);
+            UUID orderId = UUID.fromString(n.get("orderId").asText());
+            inventoryService.releaseStockByOrderId(orderId);
+            log.info("Inventory released for failed payment, order {}", orderId);
+        } catch (Exception e) { log.error("Error processing PaymentFailedEvent: {}", e.getMessage(), e); }
+    }
 }

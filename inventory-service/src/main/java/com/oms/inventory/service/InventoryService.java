@@ -1,6 +1,8 @@
 package com.oms.inventory.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.oms.events.InventoryInsufficientEvent;
+import com.oms.events.InventoryReservedEvent;
 import com.oms.inventory.domain.Inventory;
 import com.oms.inventory.domain.StockMovement;
 import com.oms.inventory.exception.InventoryException;
@@ -15,7 +17,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 @Service @RequiredArgsConstructor @Slf4j
@@ -39,13 +40,9 @@ public class InventoryService {
             Inventory inv = inventoryRepo.findByIdWithLock(item.productId())
                 .orElseThrow(() -> new InventoryException("Product not found: " + item.productId()));
             if (!inv.canReserve(item.quantity())) {
-                publishEvent(TOPIC_INSUFFICIENT, Map.of(
-                    "eventType",  "INVENTORY_INSUFFICIENT",
-                    "orderId",    orderId.toString(),
-                    "productId",  item.productId(),
-                    "requested",  String.valueOf(item.quantity()),
-                    "available",  String.valueOf(inv.getAvailableQty())
-                ));
+                publishEvent(TOPIC_INSUFFICIENT,
+                    new InventoryInsufficientEvent(orderId, item.productId(),
+                        item.quantity(), inv.getAvailableQty()));
                 log.warn("Insufficient stock for order {} product {}", orderId, item.productId());
                 return;
             }
@@ -59,17 +56,16 @@ public class InventoryService {
                 .build());
             reserved.add(item.productId());
             if (inv.getAvailableQty() <= lowStockThreshold) {
-                publishEvent(TOPIC_LOW_STOCK, Map.of(
-                    "productId",    item.productId(),
-                    "availableQty", String.valueOf(inv.getAvailableQty())
-                ));
+                try {
+                    kafka.send(TOPIC_LOW_STOCK, objectMapper.writeValueAsString(
+                        java.util.Map.of("productId", item.productId(),
+                            "availableQty", inv.getAvailableQty())));
+                } catch (Exception e) {
+                    log.warn("Failed to publish low-stock alert for {}: {}", item.productId(), e.getMessage());
+                }
             }
         }
-        publishEvent(TOPIC_RESERVED, Map.of(
-            "eventType",  "INVENTORY_RESERVED",
-            "orderId",    orderId.toString(),
-            "productIds", String.join(",", reserved)
-        ));
+        publishEvent(TOPIC_RESERVED, new InventoryReservedEvent(orderId, reserved));
         log.info("Inventory reserved for order {}", orderId);
     }
 
@@ -142,11 +138,12 @@ public class InventoryService {
         return inventoryRepo.findAll().stream().map(InventoryResponse::from).toList();
     }
 
-    private void publishEvent(String topic, Map<String, String> payload) {
+    private void publishEvent(String topic, Object event) {
         try {
-            kafka.send(topic, objectMapper.writeValueAsString(payload));
+            kafka.send(topic, objectMapper.writeValueAsString(event));
         } catch (Exception e) {
             log.error("Failed to publish event to {}: {}", topic, e.getMessage(), e);
+            throw new RuntimeException("Kafka publish failed for topic " + topic, e);
         }
     }
 

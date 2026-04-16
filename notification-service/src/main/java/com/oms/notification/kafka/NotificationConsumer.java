@@ -28,6 +28,9 @@ public class NotificationConsumer {
     @KafkaListener(topics = "oms.orders.cancelled", groupId = "oms-notification-group")
     public void onOrderCancelled(String payload) { handle(payload, "ORDER_CANCELLED"); }
 
+    @KafkaListener(topics = "oms.payment.failed", groupId = "oms-notification-group")
+    public void onPaymentFailed(String payload) { handle(payload, "PAYMENT_FAILED"); }
+
     private void handle(String payload, String eventType) {
         try {
             JsonNode node  = objectMapper.readTree(payload);
@@ -38,6 +41,7 @@ public class NotificationConsumer {
                 case "PAYMENT_CONFIRMED" -> "Payment Confirmed - " + orderId;
                 case "ORDER_SHIPPED"     -> "Your Order Has Shipped - " + orderId;
                 case "ORDER_CANCELLED"   -> "Order Cancelled - " + orderId;
+                case "PAYMENT_FAILED"    -> "Payment Failed - " + orderId;
                 default                  -> "OMS Notification";
             };
             String body = buildBody(eventType, orderId, node);
@@ -53,6 +57,7 @@ public class NotificationConsumer {
             case "PAYMENT_CONFIRMED" -> "Payment confirmed for order " + orderId + ". Your order is being prepared.";
             case "ORDER_SHIPPED"     -> "Order " + orderId + " has shipped! Tracking: " + n.path("trackingNumber").asText("N/A");
             case "ORDER_CANCELLED"   -> "Order " + orderId + " was cancelled. Reason: " + n.path("reason").asText("N/A");
+            case "PAYMENT_FAILED"    -> "Payment for order " + orderId + " could not be processed. Reason: " + n.path("reason").asText("N/A") + ". Please contact support.";
             default                  -> "Notification for order " + orderId;
         };
     }
