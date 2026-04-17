@@ -1,5 +1,6 @@
 package com.oms.order.config;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -15,6 +16,7 @@ import java.util.stream.Collectors;
 
 @Configuration
 @EnableMethodSecurity
+@Slf4j
 public class SecurityConfig {
 
     @Bean
@@ -39,6 +41,7 @@ public class SecurityConfig {
             Map<String, Object> realmAccess = jwt.getClaim("realm_access");
             if (realmAccess == null) return List.of();
             List<String> roles = (List<String>) realmAccess.getOrDefault("roles", List.of());
+            log.info("Found realm access roles {}", roles);
             return roles.stream()
                 .map(r -> new SimpleGrantedAuthority("ROLE_" + r))
                 .collect(Collectors.toList());
