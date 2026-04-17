@@ -182,11 +182,107 @@ Expected: `"active": true` with correct email and roles.
 
 ---
 
-## Step 12 — Verify events are recorded
+## Step 12 — Register a new user via the `react-ui` client
 
-After the token requests above:
+Two approaches are shown — use whichever fits your validation context.
 
-Admin Console → **Events** → should show `LOGIN` events for both users.
+### Option A — Browser-based self-registration (end-to-end UI check)
+
+Open the URL below in a browser. Keycloak will show the registration form configured for the `oms` realm.
+
+```
+http://localhost:8180/realms/oms/protocol/openid-connect/registrations?client_id=react-ui&response_type=code&redirect_uri=http://localhost:3000/
+```
+
+Fill in first name, last name, email, and password, then submit. After success Keycloak redirects back to `http://localhost:3000/`.
+
+Verify the new user appears in **Admin Console → Users**.
+
+---
+
+### Option B — CLI registration via Admin REST API
+
+```bash
+# 1. Obtain a master-realm admin token
+ADMIN_TOKEN=$(curl -s -X POST http://localhost:8180/realms/master/protocol/openid-connect/token \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "grant_type=password" \
+  -d "client_id=admin-cli" \
+  -d "username=admin" \
+  -d "password=admin" | jq -r '.access_token')
+
+# 2. Create the user in the oms realm
+curl -s -o /dev/null -w "%{http_code}" \
+  -X POST http://localhost:8180/admin/realms/oms/users \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "newuser@oms.com",
+    "email":    "newuser@oms.com",
+    "firstName": "New",
+    "lastName":  "User",
+    "enabled":   true,
+    "credentials": [{"type": "password", "value": "newuser123", "temporary": false}]
+  }'
+```
+
+Expected HTTP response: **`201`**
+
+```bash
+# 3. Confirm the user exists and is enabled
+curl -s "http://localhost:8180/admin/realms/oms/users?email=newuser%40oms.com" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" | jq '.[0] | {id, email, enabled}'
+```
+
+Expected:
+```json
+{
+  "id": "<uuid>",
+  "email": "newuser@oms.com",
+  "enabled": true
+}
+```
+
+```bash
+# 4. Verify the new user can authenticate via the react-ui client
+curl -s -X POST http://localhost:8180/realms/oms/protocol/openid-connect/token \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "grant_type=password" \
+  -d "client_id=react-ui" \
+  -d "username=newuser@oms.com" \
+  -d "password=newuser123" | jq '{access_token: .access_token[0:20], token_type, expires_in}'
+```
+
+Expected:
+```json
+{
+  "access_token": "<truncated>",
+  "token_type": "Bearer",
+  "expires_in": 300
+}
+```
+
+```bash
+# 5. Decode the token and confirm the CUSTOMER default role was assigned
+TOKEN=$(curl -s -X POST http://localhost:8180/realms/oms/protocol/openid-connect/token \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "grant_type=password" \
+  -d "client_id=react-ui" \
+  -d "username=newuser@oms.com" \
+  -d "password=newuser123" | jq -r '.access_token')
+
+echo $TOKEN | cut -d'.' -f2 | base64 -d 2>/dev/null | jq '{sub, email, realm_access}'
+```
+
+Expected: `realm_access.roles` includes `CUSTOMER` (the default role).
+
+---
+
+## Step 13 — Verify events are recorded
+
+After the token requests and registration above:
+
+Admin Console → **Events** → should show `LOGIN` and `REGISTER` events for the users.
 
 This confirms `eventsEnabled: true` and the following event types are wired up:
 `LOGIN`, `LOGIN_ERROR`, `LOGOUT`, `REGISTER`, `REGISTER_ERROR`, `UPDATE_PASSWORD`, `RESET_PASSWORD`, `TOKEN_REFRESH`
@@ -209,4 +305,5 @@ This confirms `eventsEnabled: true` and the following event types are wired up:
 | 10 | Token roles | JWT decode | `realm_access.roles` matches configured roles |
 | 11 | Gateway client creds | `curl` client_credentials | HTTP 200; valid Bearer token |
 | 12 | Token introspection | `curl` introspect with gateway creds | `"active": true` |
-| 13 | Events logged | Admin Console → Events | LOGIN events present after token requests |
+| 13 | New user registration | Browser form or Admin REST API | HTTP 201; user enabled; CUSTOMER role in JWT |
+| 14 | Events logged | Admin Console → Events | LOGIN + REGISTER events present |

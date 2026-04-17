@@ -51,7 +51,7 @@ async function getAdminToken(): Promise<string> {
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
       grant_type: "password", client_id: CLIENT_ID,
-      username: "admin", password: "admin", scope: "openid",
+      username: "admin@oms.com", password: "admin123", scope: "openid",
     }),
   });
   const data = await res.json();
