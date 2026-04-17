@@ -131,6 +131,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       INVENTORY_LOW_STOCK_THRESHOLD: ${INVENTORY_LOW_STOCK_THRESHOLD:-5}
+      PRODUCT_SERVICE_URL: http://product-service:8084
     networks:
       - oms-network
     restart: unless-stopped
@@ -142,7 +143,7 @@ services:
       start_period: 30s
 
   # ══════════════════════════════════════════════════════════
-  # PRODUCT SERVICE  (MongoDB + pgvector + AI embeddings)
+  # PRODUCT SERVICE  (PostgreSQL + JPA)
   # ══════════════════════════════════════════════════════════
   product-service:
     build:
@@ -155,11 +156,9 @@ services:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-local}
       SERVER_PORT: 8084
       KEYCLOAK_ISSUER: http://keycloak:8080/realms/oms
-      SPRING_DATA_MONGODB_URI: mongodb://mongodb:27017/products
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/products
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     networks:
       - oms-network

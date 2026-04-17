@@ -27,7 +27,7 @@ public class ProductController {
     public ProductResponse getById(@PathVariable String id) { return productService.getById(id); }
 
     @GetMapping("/search")
-    public SearchResponse search(@RequestParam String q) { return productService.semanticSearch(q); }
+    public SearchResponse search(@RequestParam String q) { return productService.search(q); }
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")

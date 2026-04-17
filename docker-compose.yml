@@ -14,7 +14,6 @@ networks:
 # ─── Volumes ──────────────────────────────────────────────────────────────────
 volumes:
   postgres-data:
-  mongo-data:
   redis-data:
   kafka-data:
   grafana-data:
@@ -223,7 +222,6 @@ services:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-local}
       SERVER_PORT: 8084
       KEYCLOAK_ISSUER: http://keycloak:8080/realms/oms
-      SPRING_DATA_MONGODB_URI: mongodb://mongodb:27017/products
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/products
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
@@ -232,8 +230,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      mongodb:
-        condition: service_started
     networks:
       - oms-network
     restart: unless-stopped
@@ -281,21 +277,6 @@ services:
       timeout: 5s
       retries: 10
 
-  mongodb:
-    image: mongo:7-jammy
-    container_name: mongodb
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongo-data:/data/db
-    networks:
-      - oms-network
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
   redis:
     image: redis:7-alpine

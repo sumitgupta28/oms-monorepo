@@ -21,7 +21,6 @@ networks:
 # ─── Persistent volumes ───────────────────────────────────────────────────────
 volumes:
   postgres-data:
-  mongo-data:
   redis-data:
   kafka-data:
   grafana-data:
@@ -52,22 +51,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
-
-  mongodb:
-    image: mongo:7-jammy
-    container_name: mongodb
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongo-data:/data/db
-    networks:
-      - oms-network
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
   redis:
     image: redis:7-alpine

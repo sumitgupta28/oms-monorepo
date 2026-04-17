@@ -4,8 +4,8 @@
 |-------------|------------------------------------|
 | **Type**    | LLD                                |
 | **Scope**   | product-service (Catalog + RAG)    |
-| **Version** | 1.0                                |
-| **Date**    | 2025-04-06                         |
+| **Version** | 1.2                                |
+| **Date**    | 2026-04-17                         |
 | **Status**  | Draft                              |
 | **Author**  | OMS Engineering Team               |
 
@@ -16,8 +16,9 @@
 1. [Package Structure](#1-package-structure)
 2. [Key Classes](#2-key-classes)
 3. [Database Schema](#3-database-schema)
-4. [Configuration Properties](#4-configuration-properties)
-5. [Error Codes](#5-error-codes)
+4. [vector_store Population Pipeline](#4-vector_store-population-pipeline)
+5. [Configuration Properties](#5-configuration-properties)
+6. [Error Codes](#6-error-codes)
 
 ---
 
@@ -25,59 +26,203 @@
 
 ```
 com.oms.product/
-  domain/      — Product (@Document — MongoDB)
-  repository/  — ProductRepository (MongoRepository)
+  domain/      — Product (@Entity — JPA/PostgreSQL)
+  repository/  — ProductRepository (JpaRepository)
   service/     — ProductService, EmbeddingService
   controller/  — ProductController
-  config/      — VectorStoreConfig, SecurityConfig
+  config/      — SecurityConfig, ProductDataInitializer
 ```
 
 ---
 
 ## 2. Key Classes
 
-| Class                    | Type       | Responsibility                                                  |
-|--------------------------|------------|-----------------------------------------------------------------|
-| `EmbeddingService`       | Service    | Calls Spring AI `EmbeddingClient`, writes to `VectorStore`      |
-| `ProductService`         | Service    | CRUD + triggers embedding on save/update                        |
-| `VectorStoreConfig`      | Config     | Wires `PgVectorStore` bean with `JdbcTemplate` + `EmbeddingModel` |
+| Class                     | Type       | Responsibility                                                          |
+|---------------------------|------------|-------------------------------------------------------------------------|
+| `EmbeddingService`        | Service    | Builds text content, calls Spring AI `VectorStore`, manages embeddings  |
+| `ProductService`          | Service    | CRUD + triggers `embedProduct` on create/update, `deleteEmbedding` on soft-delete |
+| `ProductDataInitializer`  | Runner     | Seeds 100 test products into PostgreSQL on startup (skips if count ≥ 100) |
 
 ---
 
 ## 3. Database Schema
 
-**MongoDB** — schema-less document store managed by Spring Data MongoDB.
+### PostgreSQL — `products` database
 
-**PostgreSQL** — pgvector schema managed by Spring AI (`initialize-schema: true`):
+Schema is **fully managed by Flyway**. Spring AI `initialize-schema` is disabled.
+
+#### V1 — `V1__init_pgvector.sql`
+
+Enables the pgvector PostgreSQL extension required for the `vector` column type and similarity operators:
 
 ```sql
--- Ensured by Flyway V1__init_pgvector.sql
 CREATE EXTENSION IF NOT EXISTS vector;
-
--- Table managed by Spring AI PgVectorStore
-CREATE TABLE vector_store (
-    id        UUID PRIMARY KEY,
-    content   TEXT,
-    metadata  JSONB,
-    embedding vector(1536)
-);
-CREATE INDEX ON vector_store USING ivfflat (embedding vector_cosine_ops);
 ```
 
+#### V2 — `V2__create_vector_store.sql`
+
+Creates the `vector_store` table that Spring AI's `PgVectorStore` reads and writes:
+
+```sql
+CREATE TABLE IF NOT EXISTS vector_store (
+    id        uuid    PRIMARY KEY DEFAULT gen_random_uuid(),
+    content   text,
+    metadata  json,
+    embedding vector(1536)
+);
+
+CREATE INDEX IF NOT EXISTS spring_ai_vector_store_index
+    ON vector_store
+    USING hnsw (embedding vector_cosine_ops)
+    WITH (m = 16, ef_construction = 64);
+```
+
+| Column      | Type          | Description                                                  |
+|-------------|---------------|--------------------------------------------------------------|
+| `id`        | uuid          | Auto-generated primary key                                   |
+| `content`   | text          | Concatenated product text sent to the embedding model        |
+| `metadata`  | json          | `productId`, `name`, `category`, `price` — used for lookups |
+| `embedding` | vector(1536)  | Float array returned by Anthropic `text-embedding-3-small`   |
+
+**Index:** HNSW (`vector_cosine_ops`) for approximate nearest-neighbour cosine-similarity search. `m=16 / ef_construction=64` are Spring AI's defaults.
+
+#### V3 — `V3__create_products_table.sql`
+
+Creates the `products` table that stores the full product catalog:
+
+```sql
+CREATE TABLE IF NOT EXISTS products (
+    id          VARCHAR(36)   PRIMARY KEY,
+    name        VARCHAR(255)  NOT NULL,
+    description TEXT,
+    category    VARCHAR(100)  NOT NULL,
+    price       NUMERIC(19,2) NOT NULL,
+    stock_qty   INT           NOT NULL DEFAULT 0,
+    image_url   VARCHAR(500),
+    active      BOOLEAN       NOT NULL DEFAULT TRUE,
+    created_at  TIMESTAMP     NOT NULL DEFAULT NOW(),
+    updated_at  TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_products_name     ON products (name);
+CREATE INDEX IF NOT EXISTS idx_products_category ON products (category);
+```
+
+| Column       | Type           | Description                                      |
+|--------------|----------------|--------------------------------------------------|
+| `id`         | varchar(36)    | UUID primary key, generated by JPA on insert     |
+| `name`       | varchar(255)   | Product name (indexed for keyword search)        |
+| `description`| text           | Full product description                         |
+| `category`   | varchar(100)   | Product category (indexed for filtering)         |
+| `price`      | numeric(19,2)  | Price with two decimal places                    |
+| `stock_qty`  | int            | Current stock quantity                           |
+| `image_url`  | varchar(500)   | URL to product image                             |
+| `active`     | boolean        | Soft-delete flag (false = deleted)               |
+| `created_at` | timestamp      | Set on insert, never updated                     |
+| `updated_at` | timestamp      | Set on each update                               |
+
 ---
 
-## 4. Configuration Properties
+## 4. vector_store Population Pipeline
 
-| Property                                     | Default                              | Description                   |
-|----------------------------------------------|--------------------------------------|-------------------------------|
-| `spring.data.mongodb.uri`                    | `mongodb://localhost:27017/products` | MongoDB URI                   |
-| `spring.ai.vectorstore.pgvector.dimensions`  | `1536`                               | Embedding dimensions          |
-| `spring.ai.vectorstore.pgvector.initialize-schema` | `true`                         | Spring AI manages vector_store table |
-| `spring.ai.anthropic.embedding.model`        | `text-embedding-3-small`             | Embedding model               |
+### When is it triggered?
+
+`vector_store` is written every time a product is **created** or **updated** through `ProductService`. Soft-delete removes the row.
+
+```
+ProductService.create()  ──► productRepo.save(p)       → PostgreSQL (products)
+                         └──► embeddingService.embedProduct(saved)  → vector_store
+
+ProductService.update()  ──► productRepo.save(p)       → PostgreSQL (products)
+                         └──► embeddingService.embedProduct(saved)  → vector_store
+
+ProductService.delete()  ──► productRepo.save(p)       → PostgreSQL (active = false)
+                         └──► embeddingService.deleteEmbedding(id)  → vector_store DELETE
+```
+
+### Step-by-step: `embedProduct()`
+
+```
+EmbeddingService.embedProduct(product)
+        │
+        │ 1. Build content string
+        │    "{name} {description} category:{category} price:{price}"
+        │
+        │ 2. Wrap in Spring AI Document
+        │    content  → stored in vector_store.content
+        │    metadata → { productId, name, category, price }
+        │               stored in vector_store.metadata (JSON)
+        │
+        ▼
+VectorStore.add(List.of(doc))
+        │
+        │ 3. Spring AI PgVectorStore calls Anthropic Embeddings API
+        │    model: text-embedding-3-small
+        │    input: content string
+        │    output: float[1536]
+        │
+        ▼
+INSERT INTO vector_store (id, content, metadata, embedding)
+VALUES (gen_random_uuid(), '<text>', '{"productId":"..."}', '[0.023, ...]'::vector)
+ON CONFLICT (id) DO UPDATE SET embedding = EXCLUDED.embedding;
+```
+
+### Step-by-step: `semanticSearch(query, topK)`
+
+```
+EmbeddingService.semanticSearch(query, 5)
+        │
+        │ 1. Spring AI embeds the query string via Anthropic API → float[1536]
+        │
+        │ 2. HNSW cosine-similarity search:
+        │    SELECT metadata->>'productId'
+        │    FROM vector_store
+        │    ORDER BY embedding <=> '[…query vector…]'
+        │    LIMIT 5;
+        │
+        │ 3. Returns List<String> productIds
+        │
+        ▼
+ProductService.semanticSearch()
+        │
+        │ 4. Fetches full Product entities from PostgreSQL by id
+        │
+        │ 5. Fallback: if no vector results, runs JPQL LIKE keyword search
+        │    (case-insensitive match on name or description)
+        │
+        ▼
+SearchResponse(results, count, query)
+```
+
+### Seeded products and vector_store
+
+After `saveAll()` persists all 100 products to PostgreSQL, `ProductDataInitializer` iterates the saved list and calls `embeddingService.embedProduct()` for each one. Failures are caught per-product and logged as warnings so a single Anthropic API error does not abort the remaining embeddings. Final counts (success / failed) are logged at INFO level.
+
+This means all seeded products are immediately available to semantic search on first startup.
 
 ---
 
-## 5. Error Codes
+## 5. Configuration Properties
+
+| Property                                           | Default / Value                       | Description                                          |
+|----------------------------------------------------|---------------------------------------|------------------------------------------------------|
+| `spring.datasource.url`                            | `jdbc:postgresql://localhost:5432/products` | PostgreSQL connection URL                      |
+| `spring.datasource.username`                       | `postgres`                            | Database username                                    |
+| `spring.datasource.password`                       | `postgres`                            | Database password                                    |
+| `spring.flyway.enabled`                            | `true`                                | Flyway manages PostgreSQL schema                     |
+| `spring.flyway.locations`                          | `classpath:db/migration`              | Migration scripts location                           |
+| `spring.flyway.baseline-on-migrate`                | `true`                                | Baselines existing DB on first run                   |
+| `spring.flyway.clean-disabled`                     | `true`                                | Prevents accidental schema wipe                      |
+| `spring.flyway.validate-on-migrate`                | `true`                                | Validates checksums before applying migrations       |
+| `spring.flyway.out-of-order`                       | `false`                               | Enforces strict migration version ordering           |
+| `spring.ai.vectorstore.pgvector.initialize-schema` | `false`                               | Disabled — Flyway V2 owns the `vector_store` schema  |
+| `spring.ai.vectorstore.pgvector.dimensions`        | `1536`                                | Must match `text-embedding-3-small` output size      |
+| `spring.ai.vectorstore.pgvector.distance-type`     | `COSINE_DISTANCE`                     | Cosine similarity; index uses `vector_cosine_ops`    |
+| `spring.ai.anthropic.embedding.model`              | `text-embedding-3-small`              | Anthropic model used to generate float[1536] vectors |
+
+---
+
+## 6. Error Codes
 
 | Code    | HTTP Status | Description          |
 |---------|-------------|----------------------|

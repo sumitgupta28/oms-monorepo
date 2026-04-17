@@ -18,7 +18,6 @@ import java.util.List;
 @Service @RequiredArgsConstructor @Slf4j
 public class ProductService {
     private final ProductRepository productRepo;
-    private final EmbeddingService  embeddingService;
     private final KafkaTemplate<String,String> kafka;
     private final ObjectMapper objectMapper;
 
@@ -35,7 +34,6 @@ public class ProductService {
             .category(req.category()).price(req.price()).stockQty(req.stockQty())
             .imageUrl(req.imageUrl()).build();
         Product saved = productRepo.save(p);
-        embeddingService.embedProduct(saved);
         log.info("Product created: {}", saved.getId());
         return ProductResponse.from(saved);
     }
@@ -47,7 +45,6 @@ public class ProductService {
         p.setStockQty(req.stockQty()); p.setImageUrl(req.imageUrl());
         p.setUpdatedAt(Instant.now());
         Product saved = productRepo.save(p);
-        embeddingService.embedProduct(saved);
         try {
             kafka.send("oms.products.updated",
                 objectMapper.writeValueAsString(
@@ -62,20 +59,11 @@ public class ProductService {
         Product p = findProduct(id);
         p.setActive(false);
         productRepo.save(p);
-        embeddingService.deleteEmbedding(id);
     }
 
-    public SearchResponse semanticSearch(String query) {
-        List<String> productIds = embeddingService.semanticSearch(query, 5);
-        List<ProductResponse> results = productIds.stream()
-            .map(productRepo::findById)
-            .flatMap(java.util.Optional::stream)
-            .map(ProductResponse::from)
-            .toList();
-        if (results.isEmpty()) {
-            results = productRepo.searchByKeyword(query).stream()
-                .map(ProductResponse::from).toList();
-        }
+    public SearchResponse search(String query) {
+        List<ProductResponse> results = productRepo.searchByKeyword(query).stream()
+            .map(ProductResponse::from).toList();
         return new SearchResponse(results, results.size(), query);
     }
 

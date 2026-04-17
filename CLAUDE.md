@@ -25,8 +25,9 @@ npm test           # Run tests
 Two compose files let you manage infra and apps independently:
 
 ```bash
-# ── Infrastructure (PostgreSQL, MongoDB, Redis, Kafka, Keycloak, Prometheus, Grafana)
+# ── Infrastructure (PostgreSQL, Redis, Kafka, Keycloak, Prometheus, Grafana)
 docker compose -f docker-compose.infra.yml up -d       # start infra
+docker compose -f docker-compose.infra.yml up -d keycloak      # start infra
 docker compose -f docker-compose.infra.yml down        # stop infra (keeps volumes)
 docker compose -f docker-compose.infra.yml down -v     # full teardown including volumes
 
@@ -67,11 +68,11 @@ This is a **Gradle multi-project Spring Boot 3.3 monorepo** implementing an AI-p
 | `order-service` | 8081 | Order lifecycle management + transactional outbox |
 | `payment-service` | 8082 | Mock payment processor |
 | `inventory-service` | 8083 | Stock reservation/deallocation |
-| `product-service` | 8084 | Product catalog (MongoDB) + vector search (pgvector) |
+| `product-service` | 8084 | Product catalog (PostgreSQL/JPA) with keyword search |
 | `notification-service` | 8086 | Email dispatch via Kafka events |
 | `react-ui` | 3000 | React 18 + TypeScript frontend |
 
-Infrastructure: Keycloak (8180), Grafana (3001), Kafdrop (9000), Prometheus (9090), PostgreSQL (5432), MongoDB (27017), Redis (6379), Kafka (9092).
+Infrastructure: Keycloak (8180), Grafana (3001), Kafdrop (9000), Prometheus (9090), PostgreSQL (5432), Redis (6379), Kafka (9092).
 
 ### Event-Driven Saga (Order Flow)
 
@@ -96,13 +97,12 @@ Order placement uses a saga pattern with Kafka:
 
 Chat memory is Redis-backed (10-message sliding window). Responses stream to the frontend via SSE using `useAgentStream` hook. The agent calls other services via REST clients (`ProductClient`, `OrderClient`, etc.) resolved through environment variables (e.g., `ORDER_SERVICE_URL`).
 
-### Product Service — Dual Storage
+### Product Service — Storage
 
-Products are stored in two systems simultaneously:
-- **MongoDB** (`products` DB): Full product documents
-- **PostgreSQL + pgvector** (`products` DB): Vector embeddings for semantic search (generated using Anthropic embeddings)
+Products are stored in PostgreSQL:
+- **PostgreSQL** (`products` DB): Full product catalog as JPA entities (Flyway-managed schema)
 
-Search via `GET /products/search?query=...` uses vector similarity, not keyword matching.
+Search via `GET /products/search?query=...` uses JPQL LIKE keyword matching.
 
 ### Authentication
 
@@ -115,7 +115,7 @@ Test credentials: `customer@oms.com / customer123` (CUSTOMER role), `admin@oms.c
 - `order-service` → PostgreSQL `orders` DB (JPA, auto-schema)
 - `payment-service` → PostgreSQL `payments` DB
 - `inventory-service` → PostgreSQL `inventory` DB
-- `product-service` → MongoDB `products` + PostgreSQL `products` (pgvector)
+- `product-service` → PostgreSQL `products` DB (JPA entities)
 - `agent-service` → Redis (ChatMemory)
 - All services share the same PostgreSQL instance on port 5432 with separate databases.
 
