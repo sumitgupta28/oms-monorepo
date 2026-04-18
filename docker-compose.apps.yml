@@ -39,6 +39,7 @@ services:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-local}
       KEYCLOAK_URL: http://keycloak:8080
       KEYCLOAK_REALM: oms
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET:-gateway-secret-local}
       ORDER_SERVICE_URI: http://order-service:8081
       PAYMENT_SERVICE_URI: http://payment-service:8082
       INVENTORY_SERVICE_URI: http://inventory-service:8083

@@ -12,6 +12,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 
@@ -61,9 +62,10 @@ public class ProductService {
         productRepo.save(p);
     }
 
-    public SearchResponse search(String query) {
-        List<ProductResponse> results = productRepo.searchByKeyword(query).stream()
-            .map(ProductResponse::from).toList();
+    public SearchResponse search(String query, BigDecimal minPrice, BigDecimal maxPrice) {
+        List<ProductResponse> results = (minPrice != null || maxPrice != null)
+            ? productRepo.searchByKeywordAndPrice(query, minPrice, maxPrice).stream().map(ProductResponse::from).toList()
+            : productRepo.searchByKeyword(query).stream().map(ProductResponse::from).toList();
         return new SearchResponse(results, results.size(), query);
     }
 

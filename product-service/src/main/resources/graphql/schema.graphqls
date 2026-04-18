@@ -1,0 +1,31 @@
+type ProductType {
+    id:          ID!
+    name:        String!
+    description: String
+    category:    String!
+    price:       String!
+    stockQty:    Int!
+    imageUrl:    String
+    active:      Boolean!
+    createdAt:   String!
+}
+
+type SearchResult {
+    results: [ProductType!]!
+    total:   Int!
+    query:   String!
+}
+
+type ProductPage {
+    content:       [ProductType!]!
+    totalElements: Int!
+    totalPages:    Int!
+    pageNumber:    Int!
+    pageSize:      Int!
+}
+
+type Query {
+    searchProducts(query: String!, minPrice: String, maxPrice: String): SearchResult!
+    product(id: ID!): ProductType
+    products(page: Int = 0, size: Int = 20, sort: String = "name"): ProductPage!
+}

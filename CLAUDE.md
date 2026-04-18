@@ -55,6 +55,8 @@ docker compose -f docker-compose.apps.yml logs -f order-service
 ### Environment Setup
 Copy `.env.example` to `.env` and set `ANTHROPIC_API_KEY` before starting Docker Compose.
 
+For the React frontend, only `VITE_GATEWAY_URL` is required (defaults to `http://localhost:8080`). The previous Keycloak env vars (`VITE_KEYCLOAK_URL`, `VITE_KEYCLOAK_REALM`, `VITE_KEYCLOAK_CLIENT_ID`) have been removed — all auth goes through the gateway.
+
 ## Architecture Overview
 
 This is a **Gradle multi-project Spring Boot 3.3 monorepo** implementing an AI-powered Order Management System. Services communicate via both REST (synchronous) and Kafka (asynchronous).
@@ -106,7 +108,24 @@ Search via `GET /products/search?query=...` uses JPQL LIKE keyword matching.
 
 ### Authentication
 
-**Keycloak 24** (realm: `oms`, client: `react-ui`) issues JWTs. Every Spring Boot service validates tokens via `spring.security.oauth2.resourceserver.jwt.issuer-uri`. The Gateway enforces auth; downstream services re-validate independently.
+**Keycloak 24** (realm: `oms`) issues JWTs. Every Spring Boot service validates tokens via `spring.security.oauth2.resourceserver.jwt.issuer-uri`. The Gateway enforces auth; downstream services re-validate independently.
+
+**All auth flows route through the Gateway** — the frontend never talks to Keycloak directly:
+
+| Endpoint | Description | Auth required |
+|---|---|---|
+| `POST /auth/login` | `{email, password}` → `TokenResponse` | No |
+| `POST /auth/refresh` | `{refreshToken}` → `TokenResponse` | No |
+| `POST /auth/logout` | `{refreshToken}` → 204 | No |
+| `POST /auth/register` | `{firstName,lastName,email,password}` → 201 | No |
+
+Two Keycloak clients are in use:
+- `react-ui` (public, `directAccessGrantsEnabled`) — used by Gateway for login/refresh/logout
+- `gateway` (confidential, `serviceAccountsEnabled`) — used by Gateway for admin user creation
+
+`TokenResponse` fields returned by the Gateway: `accessToken`, `refreshToken`, `expiresIn`.
+
+Frontend only needs `VITE_GATEWAY_URL`; no Keycloak URL, realm, or client ID is exposed to the browser.
 
 Test credentials: `customer@oms.com / customer123` (CUSTOMER role), `admin@oms.com / admin123` (ADMIN role).
 
@@ -138,4 +157,5 @@ Each service has its own `build.gradle` adding only what it needs. `settings.gra
 - `pages/`: ProductCatalogPage, ChatPage, LoginPage, RegisterPage, AdminDashboard
 - `hooks/useAgentStream.ts`: SSE streaming for AI chat
 - `api/productApi.ts`, `orderApi.ts`: REST clients pointing to Gateway (port 8080)
-- Auth via Keycloak OIDC; protected routes use `ProtectedLayout`
+- `auth/authApi.ts`: login, refresh, logout, register — all via `VITE_GATEWAY_URL/auth/*`
+- Protected routes use `ProtectedLayout`; no Keycloak SDK in the frontend

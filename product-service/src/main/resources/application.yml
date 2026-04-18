@@ -23,6 +23,10 @@ spring:
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
+  graphql:
+    graphiql:
+      enabled: true
+    path: /graphql
   security:
     oauth2:
       resourceserver:

@@ -19,7 +19,7 @@ public class SecurityConfig {
         return http.csrf(AbstractHttpConfigurer::disable)
             .sessionManagement(s->s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(a->a
-                .requestMatchers("/actuator/health","/products","/products/**").permitAll()
+                .requestMatchers("/actuator/health","/products","/products/**","/graphql","/graphiql","/graphiql/**").permitAll()
                 .anyRequest().authenticated())
             .oauth2ResourceServer(o->o.jwt(j->j.jwtAuthenticationConverter(jwtConverter()))).build();
     }

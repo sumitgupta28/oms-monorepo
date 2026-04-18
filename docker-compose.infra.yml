@@ -136,8 +136,9 @@ services:
       KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
       KC_DB_USERNAME: postgres
       KC_DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      KC_HOSTNAME_STRICT: "false"
-      KC_HTTP_ENABLED: "true"
+      KC_HOSTNAME_STRICT: false
+      KC_HTTP_ENABLED: true
+      KC_LOG_LEVEL: DEBUG
     volumes:
       - ./keycloak/realms:/opt/keycloak/data/import
     depends_on:

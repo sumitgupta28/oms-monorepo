@@ -2,6 +2,7 @@ package com.oms.gateway.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -11,8 +12,12 @@ import org.springframework.security.web.server.context.NoOpServerSecurityContext
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.reactive.CorsWebFilter;
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
+import org.springframework.web.server.WebFilter;
+import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Flux;
 
+import java.net.URI;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -36,14 +41,41 @@ public class SecurityConfig {
         return new CorsWebFilter(source);
     }
 
+    /**
+     * EventSource (SSE) cannot send headers, so the frontend passes the JWT as
+     * ?access_token=... This filter hoists it into Authorization: Bearer before
+     * the security filter chain processes the request.
+     */
+    @Bean
+    @Order(-101)
+    public WebFilter sseTokenFilter() {
+        return (exchange, chain) -> {
+            String token = exchange.getRequest().getQueryParams().getFirst("access_token");
+            if (token != null && exchange.getRequest().getHeaders().getFirst("Authorization") == null) {
+                URI originalUri = exchange.getRequest().getURI();
+                String newQuery = Arrays.stream(originalUri.getRawQuery().split("&"))
+                    .filter(p -> !p.startsWith("access_token="))
+                    .collect(Collectors.joining("&"));
+                URI newUri = UriComponentsBuilder.fromUri(originalUri)
+                    .replaceQuery(newQuery.isEmpty() ? null : newQuery)
+                    .build(true)
+                    .toUri();
+                exchange = exchange.mutate()
+                    .request(r -> r.uri(newUri).header("Authorization", "Bearer " + token))
+                    .build();
+            }
+            return chain.filter(exchange);
+        };
+    }
+
     @Bean
     public SecurityWebFilterChain springSecurityFilterChain(ServerHttpSecurity http) {
         return http
             .csrf(ServerHttpSecurity.CsrfSpec::disable)
-
-                .securityContextRepository(NoOpServerSecurityContextRepository.getInstance())
+            .securityContextRepository(NoOpServerSecurityContextRepository.getInstance())
             .authorizeExchange(auth -> auth
                 .pathMatchers("/actuator/health").permitAll()
+                .pathMatchers("/auth/login", "/auth/refresh", "/auth/logout", "/auth/register").permitAll()
                 .pathMatchers("/api/products", "/api/products/**").permitAll()
                 .pathMatchers("/api/chat/**").hasRole("CUSTOMER")
                 .pathMatchers("/api/admin/**").hasRole("ADMIN")

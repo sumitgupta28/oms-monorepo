@@ -15,10 +15,12 @@ public class ProductTools {
     private final ProductClient productClient;
     private final InventoryClient inventoryClient;
 
-    @Tool(description = "Search for products using natural language. Use for queries like find me a laptop under 1000 or best gaming headset.")
-    public String searchProducts(String query) {
-        log.info("Tool invoked: searchProducts(query={})", query);
-        return productClient.searchProducts(query);
+    @Tool(description = "Search for products by keyword with optional price range. " +
+          "Extract minPrice and maxPrice from phrases like 'under $1000', 'between $200 and $500', 'over $50'. " +
+          "Pass null for price bounds that are not mentioned.")
+    public String searchProducts(String query, Double minPrice, Double maxPrice) {
+        log.info("Tool invoked: searchProducts(query={}, minPrice={}, maxPrice={})", query, minPrice, maxPrice);
+        return productClient.searchProducts(query, minPrice, maxPrice);
     }
 
     @Tool(description = "Get detailed information about a specific product by its ID.")

@@ -11,6 +11,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
+
 @RestController @RequestMapping("/products") @RequiredArgsConstructor
 public class ProductController {
     private final ProductService productService;
@@ -27,7 +29,12 @@ public class ProductController {
     public ProductResponse getById(@PathVariable String id) { return productService.getById(id); }
 
     @GetMapping("/search")
-    public SearchResponse search(@RequestParam String q) { return productService.search(q); }
+    public SearchResponse search(
+        @RequestParam String q,
+        @RequestParam(required = false) BigDecimal minPrice,
+        @RequestParam(required = false) BigDecimal maxPrice) {
+        return productService.search(q, minPrice, maxPrice);
+    }
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")

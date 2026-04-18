@@ -47,7 +47,10 @@
       "firstName": "System",
       "lastName": "Admin",
       "credentials": [{"type":"password","value":"admin123","temporary":false}],
-      "realmRoles": ["ADMIN","CUSTOMER","AGENT_MANAGER"]
+      "realmRoles": ["ADMIN","CUSTOMER","AGENT_MANAGER"],
+      "clientRoles": {
+        "realm-management": ["manage-users", "view-users", "query-users"]
+      }
     },
     {
       "username": "customer@oms.com",
@@ -58,6 +61,14 @@
       "lastName": "Customer",
       "credentials": [{"type":"password","value":"customer123","temporary":false}],
       "realmRoles": ["CUSTOMER"]
+    },
+    {
+      "username": "service-account-gateway",
+      "enabled": true,
+      "serviceAccountClientId": "gateway",
+      "clientRoles": {
+        "realm-management": ["manage-users", "view-users", "query-users"]
+      }
     }
   ],
   "eventsEnabled": true,
