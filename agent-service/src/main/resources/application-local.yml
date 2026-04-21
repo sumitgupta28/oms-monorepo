@@ -3,8 +3,6 @@ server:
 spring:
   application:
     name: agent-service
-  profiles:
-    active: ${AI_PROVIDER:ollama}
   autoconfigure:
     exclude:
       - org.springframework.ai.model.anthropic.autoconfigure.AnthropicChatAutoConfiguration
@@ -18,10 +16,10 @@ spring:
         jwt:
           issuer-uri: ${KEYCLOAK_ISSUER:http://localhost:8180/realms/oms}
 services:
-  order-url:     ${ORDER_SERVICE_URL:http://order-service:8081}
-  payment-url:   ${PAYMENT_SERVICE_URL:http://payment-service:8082}
-  inventory-url: ${INVENTORY_SERVICE_URL:http://inventory-service:8083}
-  product-url:   ${PRODUCT_SERVICE_URL:http://product-service:8084}
+  order-url:     ${ORDER_SERVICE_URL:http://localhost:8081}
+  payment-url:   ${PAYMENT_SERVICE_URL:http://localhost:8082}
+  inventory-url: ${INVENTORY_SERVICE_URL:http://localhost:8083}
+  product-url:   ${PRODUCT_SERVICE_URL:http://localhost:8084}
 management:
   endpoints:
     web:

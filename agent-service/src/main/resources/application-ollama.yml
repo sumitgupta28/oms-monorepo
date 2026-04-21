@@ -1,5 +1,5 @@
 ai:
   ollama:
     base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
-    model: ${AI_MODEL:llama3.2}
+    model: ${AI_MODEL:glm-5:cloud}
     max-tokens: ${AI_MAX_TOKENS:4096}
