@@ -18,5 +18,6 @@ dependencies {
 
     implementation 'org.springframework.ai:spring-ai-starter-vector-store-redis'
 
+    implementation 'org.springframework.boot:spring-boot-starter-aop'
     implementation 'io.micrometer:micrometer-registry-prometheus'
 }
