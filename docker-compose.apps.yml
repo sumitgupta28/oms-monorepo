@@ -11,8 +11,9 @@
 #   docker compose -f docker-compose.apps.yml down         # stop apps only
 #   docker compose -f docker-compose.apps.yml build        # rebuild all images
 #
-# Environment:
-#   Copy .env.example → .env and set ANTHROPIC_API_KEY before starting.
+# AI Provider:
+#   Anthropic (default): set ANTHROPIC_API_KEY in .env
+#   Ollama (no key):     docker compose -f docker-compose.apps.yml -f docker-compose.ollama.yml up -d
 # ─────────────────────────────────────────────────────────────────────────────
 
 name: oms-apps
@@ -209,7 +210,11 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-local}
       SERVER_PORT: 8085
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      AI_PROVIDER: ${AI_PROVIDER:-anthropic}
+      AI_MODEL: ${AI_MODEL:-}
+      AI_MAX_TOKENS: ${AI_MAX_TOKENS:-4096}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
       KEYCLOAK_ISSUER: http://keycloak:8080/realms/oms
       ORDER_SERVICE_URL: http://order-service:8081
       PAYMENT_SERVICE_URL: http://payment-service:8082
@@ -226,6 +231,24 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+
+  # ══════════════════════════════════════════════════════════
+  # OLLAMA — local LLM (only needed when AI_PROVIDER=ollama)
+  # Start: docker compose -f docker-compose.apps.yml --profile ollama up -d
+  # Then pull model: docker exec ollama ollama pull llama3.2
+  # ══════════════════════════════════════════════════════════
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    networks:
+      - oms-network
+    restart: unless-stopped
+    profiles:
+      - ollama
 
   # ══════════════════════════════════════════════════════════
   # REACT FRONTEND
@@ -245,3 +268,6 @@ services:
     networks:
       - oms-network
     restart: unless-stopped
+
+volumes:
+  ollama-data:

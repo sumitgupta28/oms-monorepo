@@ -1,0 +1,56 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# OMS — Ollama overlay
+#
+# Overrides the agent-service to use a local Ollama LLM instead of Anthropic.
+# No ANTHROPIC_API_KEY required.
+#
+# Usage (infra must be running first):
+#   docker compose -f docker-compose.infra.yml up -d
+#   docker compose -f docker-compose.apps.yml -f docker-compose.ollama.yml up -d
+#
+# First-time model pull:
+#   docker exec ollama ollama pull llama3.2
+#
+# Switch model at runtime (no rebuild needed):
+#   AI_MODEL=mistral docker compose -f docker-compose.apps.yml \
+#     -f docker-compose.ollama.yml up -d agent-service
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: oms-apps
+
+networks:
+  oms-network:
+    external: true
+    name: oms-network
+
+volumes:
+  ollama-data:
+
+services:
+
+  # ── Override agent-service to use Ollama ────────────────────────────────────
+  agent-service:
+    environment:
+      AI_PROVIDER: ollama
+      ANTHROPIC_API_KEY: ""
+      OLLAMA_BASE_URL: http://ollama:11434
+      AI_MODEL: ${AI_MODEL:-llama3.2}
+      AI_MAX_TOKENS: ${AI_MAX_TOKENS:-4096}
+
+  # ── Local LLM runtime ───────────────────────────────────────────────────────
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    networks:
+      - oms-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:11434/api/tags || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
