@@ -1,4 +1,5 @@
 package com.oms.agent.controller;
+import com.oms.agent.security.JwtTokenHolder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
@@ -38,7 +39,8 @@ public class ChatController {
             .system(systemPrompt)
             .user(message)
             .stream()
-            .content();
+            .content()
+            .contextWrite(ctx -> ctx.put(JwtTokenHolder.CONTEXT_KEY, jwt.getTokenValue()));
     }
 
     @DeleteMapping("/session/{sessionId}")
