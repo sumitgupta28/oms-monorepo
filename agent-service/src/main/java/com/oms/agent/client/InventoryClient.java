@@ -6,14 +6,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClient;
 
 @Component
 @RequiredArgsConstructor
 @Slf4j
 public class InventoryClient {
 
-    private final RestTemplate restTemplate;
+    private final RestClient restClient;
     private final ObjectMapper objectMapper;
 
     @Value("${services.inventory-url:http://inventory-service:8083}")
@@ -22,8 +22,10 @@ public class InventoryClient {
     public String validateStock(String productId, int qty) {
         log.info("validateStock: productId={}, quantity={}", productId, qty);
         try {
-            var response = restTemplate.getForObject(
-                inventoryUrl + "/inventory/" + productId, Object.class);
+            var response = restClient.get()
+                    .uri(inventoryUrl + "/inventory/{id}", productId)
+                    .retrieve()
+                    .body(Object.class);
             return objectMapper.writeValueAsString(response);
         } catch (Exception e) {
             log.error("validateStock failed for product {}: {}", productId, e.getMessage(), e);

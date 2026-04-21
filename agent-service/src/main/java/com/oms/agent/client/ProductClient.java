@@ -6,9 +6,8 @@ import com.oms.agent.exception.AgentToolException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.*;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClient;
 
 import java.util.Map;
 
@@ -17,7 +16,7 @@ import java.util.Map;
 @Slf4j
 public class ProductClient {
 
-    private final RestTemplate restTemplate;
+    private final RestClient restClient;
     private final ObjectMapper objectMapper;
 
     @Value("${services.product-url:http://product-service:8084}")
@@ -70,12 +69,12 @@ public class ProductClient {
     }
 
     private JsonNode postGraphQL(String query) throws Exception {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        String body = objectMapper.writeValueAsString(Map.of("query", query));
-        ResponseEntity<String> response = restTemplate.exchange(
-            productUrl + "/graphql", HttpMethod.POST, new HttpEntity<>(body, headers), String.class);
-        return objectMapper.readTree(response.getBody());
+        String responseBody = restClient.post()
+                .uri(productUrl + "/graphql")
+                .body(Map.of("query", query))
+                .retrieve()
+                .body(String.class);
+        return objectMapper.readTree(responseBody);
     }
 
     private String jsonStr(String value) {

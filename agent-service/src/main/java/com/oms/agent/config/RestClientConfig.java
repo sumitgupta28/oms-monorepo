@@ -1,22 +1,25 @@
 package com.oms.agent.config;
 
 import com.oms.agent.security.JwtTokenHolder;
-import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.web.client.RestClient;
 
 import java.time.Duration;
 
 @Configuration
-public class RestTemplateConfig {
+public class RestClientConfig {
 
     @Bean
-    public RestTemplate restTemplate(RestTemplateBuilder builder) {
-        return builder
-                .setConnectTimeout(Duration.ofSeconds(5))
-                .setReadTimeout(Duration.ofSeconds(10))
-                .additionalInterceptors((request, body, execution) -> {
+    public RestClient restClient() {
+        var factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout((int) Duration.ofSeconds(5).toMillis());
+        factory.setReadTimeout((int) Duration.ofSeconds(10).toMillis());
+
+        return RestClient.builder()
+                .requestFactory(factory)
+                .requestInterceptor((request, body, execution) -> {
                     String token = JwtTokenHolder.get();
                     if (token != null) {
                         request.getHeaders().setBearerAuth(token);

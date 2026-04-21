@@ -6,7 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClient;
 
 import java.util.List;
 import java.util.Map;
@@ -16,7 +16,7 @@ import java.util.Map;
 @Slf4j
 public class OrderClient {
 
-    private final RestTemplate restTemplate;
+    private final RestClient restClient;
     private final ObjectMapper objectMapper;
 
     @Value("${services.order-url:http://order-service:8081}")
@@ -36,7 +36,11 @@ public class OrderClient {
                 "userId", userId,
                 "items", List.of(item)
             );
-            var response = restTemplate.postForObject(orderUrl + "/orders", body, Object.class);
+            var response = restClient.post()
+                    .uri(orderUrl + "/orders")
+                    .body(body)
+                    .retrieve()
+                    .body(Object.class);
             return objectMapper.writeValueAsString(response);
         } catch (Exception e) {
             log.error("placeOrder failed for user {}: {}", userId, e.getMessage(), e);
@@ -47,7 +51,10 @@ public class OrderClient {
     public String trackOrder(String orderId) {
         log.info("trackOrder: orderId={}", orderId);
         try {
-            var response = restTemplate.getForObject(orderUrl + "/orders/" + orderId, Object.class);
+            var response = restClient.get()
+                    .uri(orderUrl + "/orders/{id}", orderId)
+                    .retrieve()
+                    .body(Object.class);
             return objectMapper.writeValueAsString(response);
         } catch (Exception e) {
             log.error("trackOrder failed for order {}: {}", orderId, e.getMessage(), e);
@@ -59,7 +66,11 @@ public class OrderClient {
         log.info("cancelOrder: orderId={}, reason={}", orderId, reason);
         try {
             Map<String, String> body = Map.of("reason", reason);
-            restTemplate.patchForObject(orderUrl + "/orders/" + orderId + "/cancel", body, Object.class);
+            restClient.patch()
+                    .uri(orderUrl + "/orders/{id}/cancel", orderId)
+                    .body(body)
+                    .retrieve()
+                    .toBodilessEntity();
             return "{\"message\":\"Order " + orderId + " cancelled successfully\"}";
         } catch (Exception e) {
             log.error("cancelOrder failed for order {}: {}", orderId, e.getMessage(), e);
@@ -70,7 +81,10 @@ public class OrderClient {
     public String getMyOrders(String userId) {
         log.info("getMyOrders: userId={}", userId);
         try {
-            var response = restTemplate.getForObject(orderUrl + "/orders/my", Object.class);
+            var response = restClient.get()
+                    .uri(orderUrl + "/orders/my")
+                    .retrieve()
+                    .body(Object.class);
             return objectMapper.writeValueAsString(response);
         } catch (Exception e) {
             log.error("getMyOrders failed for user {}: {}", userId, e.getMessage(), e);

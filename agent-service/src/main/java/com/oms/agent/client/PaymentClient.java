@@ -5,11 +5,8 @@ import com.oms.agent.exception.AgentToolException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClient;
 
 import java.util.Map;
 
@@ -18,7 +15,7 @@ import java.util.Map;
 @Slf4j
 public class PaymentClient {
 
-    private final RestTemplate restTemplate;
+    private final RestClient restClient;
     private final ObjectMapper objectMapper;
 
     @Value("${services.payment-url:http://payment-service:8082}")
@@ -28,11 +25,12 @@ public class PaymentClient {
         log.info("initiatePayment: orderId={}, amount={}", orderId, amount);
         try {
             Map<String, Object> body = Map.of("orderId", orderId, "amount", amount);
-            HttpHeaders headers = new HttpHeaders();
-            headers.set("Idempotency-Key", "pay-" + orderId);
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            var entity = new HttpEntity<>(body, headers);
-            var response = restTemplate.postForObject(paymentUrl + "/payments", entity, Object.class);
+            var response = restClient.post()
+                    .uri(paymentUrl + "/payments")
+                    .header("Idempotency-Key", "pay-" + orderId)
+                    .body(body)
+                    .retrieve()
+                    .body(Object.class);
             return objectMapper.writeValueAsString(response);
         } catch (Exception e) {
             log.error("initiatePayment failed for order {}: {}", orderId, e.getMessage(), e);
@@ -43,7 +41,10 @@ public class PaymentClient {
     public String getPaymentStatus(String paymentId) {
         log.info("getPaymentStatus: paymentId={}", paymentId);
         try {
-            var response = restTemplate.getForObject(paymentUrl + "/payments/" + paymentId, Object.class);
+            var response = restClient.get()
+                    .uri(paymentUrl + "/payments/{id}", paymentId)
+                    .retrieve()
+                    .body(Object.class);
             return objectMapper.writeValueAsString(response);
         } catch (Exception e) {
             log.error("getPaymentStatus failed for payment {}: {}", paymentId, e.getMessage(), e);
