@@ -25,3 +25,7 @@ management:
     web:
       exposure:
         include: health,prometheus,metrics
+
+logging:
+  level:
+    com.oms.agent.aspect: debug
