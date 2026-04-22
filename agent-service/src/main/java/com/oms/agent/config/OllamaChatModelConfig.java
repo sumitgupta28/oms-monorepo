@@ -1,5 +1,6 @@
 package com.oms.agent.config;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.ollama.OllamaChatModel;
 import org.springframework.ai.ollama.api.OllamaApi;
@@ -11,6 +12,7 @@ import org.springframework.context.annotation.Profile;
 
 @Configuration
 @Profile("ollama")
+@Slf4j
 public class OllamaChatModelConfig {
 
     @Value("${ai.ollama.base-url}")
@@ -29,13 +31,17 @@ public class OllamaChatModelConfig {
                 .build();
 
         OllamaChatOptions options = OllamaChatOptions.builder()
+                .logitsAll(true)
                 .model(model)
                 .numPredict(numPredict)
                 .build();
 
-        return OllamaChatModel.builder()
+        OllamaChatModel ollamaChatModel = OllamaChatModel.builder()
                 .ollamaApi(api)
                 .defaultOptions(options)
                 .build();
+        log.info("Chat[OllamaChatModel] Model: {}", ollamaChatModel.getDefaultOptions().getModel());
+        log.info("Chat[OllamaChatModel] MaxTokens: {}", ollamaChatModel.getDefaultOptions().getMaxTokens());
+        return ollamaChatModel;
     }
 }

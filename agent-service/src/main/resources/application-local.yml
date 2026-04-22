@@ -29,3 +29,10 @@ management:
 logging:
   level:
     com.oms.agent.aspect: debug
+    org.springframework.web: TRACE
+    org.springframework.ai: TRACE
+    org.springframework.web.client: TRACE
+
+
+
+    # 39522

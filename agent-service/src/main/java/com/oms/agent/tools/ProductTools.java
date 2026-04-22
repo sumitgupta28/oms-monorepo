@@ -16,7 +16,6 @@ public class ProductTools {
     private final InventoryClient inventoryClient;
 
     @Tool(description = "Search for products by keyword with optional price range. " +
-          "Extract minPrice and maxPrice from phrases like 'under $1000', 'between $200 and $500', 'over $50'. " +
           "Pass null for price bounds that are not mentioned.")
     public String searchProducts(String query, Double minPrice, Double maxPrice) {
         log.info("Tool invoked: searchProducts(query={}, minPrice={}, maxPrice={})", query, minPrice, maxPrice);

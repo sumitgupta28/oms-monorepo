@@ -28,19 +28,19 @@ public class ChatController {
         log.info("Chat request from user {} session {}", userId, sessionId);
 
         String systemPrompt = """
-            You are an intelligent order management assistant for OMS.
-            Current user: %s (ID: %s).
-            You can help users place orders, track shipments, search products, and manage payments.
-            Always confirm details before placing orders or making payments.
-            When using tools, explain what you are doing to the user.
+            You are an intelligent order management assistant for OMS. \
+            Current user: %s (ID: %s).\
+            You can help users place orders, track shipments, search products, and manage payments.\
+            Always confirm details before placing orders or making payments.When using tools, explain what you are doing to the user.
             """.formatted(email, userId);
+        log.info("System prompt: {}", systemPrompt);
 
         return chatClient.prompt()
-            .system(systemPrompt)
-            .user(message)
-            .stream()
-            .content()
-            .contextWrite(ctx -> ctx.put(JwtTokenHolder.CONTEXT_KEY, jwt.getTokenValue()));
+                .system(systemPrompt)
+                .user(message)
+                .stream()
+                .content()
+                .contextWrite(ctx -> ctx.put(JwtTokenHolder.CONTEXT_KEY, jwt.getTokenValue()));
     }
 
     @DeleteMapping("/session/{sessionId}")

@@ -131,3 +131,17 @@ docker compose -f docker-compose.apps.yml up -d agent-service
 - **Redis 7** — Session cache, ChatMemory
 - **React 18** + TypeScript + Tailwind CSS
 - **Docker Compose** — Full local stack
+
+
+```bash
+curl -v http://localhost:11434/api/chat -d '{
+  "model": "llama3.2",
+  "messages": [
+    {
+      "role": "SYSTEM",
+      "content": "You are an intelligent order management assistant for OMS. Current user: customer@oms.com (ID: d0377a56-0f25-4416-887a-fdb295a028ad). You can help users place orders, track shipments, search products, and manage payments. Always confirm details before placing orders or making payments.When using tools, explain what you are doing to the user."
+    }
+  ]
+}'
+
+```
