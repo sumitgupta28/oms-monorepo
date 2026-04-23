@@ -8,8 +8,8 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.reactive.CorsWebFilter;
-import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.filter.CorsFilter;
 
 import java.util.List;
 import java.util.Map;
@@ -20,7 +20,7 @@ public class SecurityConfig {
 
 
     @Bean
-    public CorsWebFilter corsWebFilter() {
+    public CorsFilter corsFilter() {
         CorsConfiguration corsConfig = new CorsConfiguration();
         corsConfig.addAllowedOrigin("http://localhost:3000");
         corsConfig.setMaxAge(3600L);
@@ -31,7 +31,7 @@ public class SecurityConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", corsConfig);
 
-        return new CorsWebFilter(source);
+        return new CorsFilter(source);
     }
 
     @Bean

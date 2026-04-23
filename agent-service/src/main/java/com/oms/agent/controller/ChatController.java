@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.http.MediaType;
+import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
@@ -20,7 +21,7 @@ public class ChatController {
     private final ChatClient chatClient;
 
     @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<String> stream(
+    public Flux<ServerSentEvent<String>> stream(
         @RequestParam String message,
         @RequestParam(defaultValue = "default") String sessionId,
         @AuthenticationPrincipal Jwt jwt
@@ -42,19 +43,19 @@ public class ChatController {
             You can help users place orders, track shipments, search products, and manage payments. \
             Always confirm details before placing orders or making payments. When using tools, explain what you are doing to the user.
             """.formatted(email, userId);
-        log.debug("System prompt: {}", systemPrompt);
+
+        ServerSentEvent<String> doneEvent = ServerSentEvent.<String>builder().event("done").data("").build();
 
         return chatClient.prompt()
                 .system(systemPrompt)
                 .user(message)
+                .advisors(a -> a.param("chat_memory_conversation_id", sessionId))
                 .stream()
                 .content()
-                .map(content -> "data: " + content + "\n\n")  // Format as SSE
-                .doOnError(error -> log.error("Stream error: ", error))
-                .onErrorResume(error -> {
-                    log.error("Error during chat stream: {}", error.getMessage());
-                    return Flux.empty();
-                })
+                .map(content -> ServerSentEvent.<String>builder().data(content).build())
+                .concatWith(Flux.just(doneEvent))
+                .doOnError(error -> log.error("Stream error: {}", error.getMessage()))
+                .onErrorResume(error -> Flux.just(doneEvent))
                 .contextWrite(ctx -> ctx.put(JwtTokenHolder.CONTEXT_KEY, jwt.getTokenValue()));
     }
 
