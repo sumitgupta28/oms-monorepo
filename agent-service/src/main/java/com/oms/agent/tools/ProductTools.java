@@ -2,6 +2,7 @@ package com.oms.agent.tools;
 
 import com.oms.agent.client.InventoryClient;
 import com.oms.agent.client.ProductClient;
+import com.oms.agent.embedding.ProductIndexingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.tool.annotation.Tool;
@@ -14,12 +15,14 @@ public class ProductTools {
 
     private final ProductClient productClient;
     private final InventoryClient inventoryClient;
+    private final ProductIndexingService productIndexingService;
 
-    @Tool(description = "Search for products by keyword with optional price range. " +
+    @Tool(description = "Search for products using semantic similarity. Understands natural language, " +
+          "synonyms, and descriptions — not just exact keyword matches. " +
           "Pass null for price bounds that are not mentioned.")
     public String searchProducts(String query, Double minPrice, Double maxPrice) {
         log.info("Tool invoked: searchProducts(query={}, minPrice={}, maxPrice={})", query, minPrice, maxPrice);
-        return productClient.searchProducts(query, minPrice, maxPrice);
+        return productIndexingService.semanticSearch(query, minPrice, maxPrice, 15);
     }
 
     @Tool(description = "Get detailed information about a specific product by its ID.")

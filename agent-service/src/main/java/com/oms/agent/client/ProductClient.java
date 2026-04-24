@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
+import java.util.List;
 import java.util.Map;
 
 @Component
@@ -65,6 +66,27 @@ public class ProductClient {
         } catch (Exception e) {
             log.error("getProductDetails(graphql) failed for product {}: {}", productId, e.getMessage(), e);
             throw new AgentToolException("getProductDetails", "Product not found: " + productId, e);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    public List<Map<String, Object>> getAllProducts(int page, int size) {
+        log.info("getAllProducts(graphql): page={} size={}", page, size);
+        try {
+            String gql = """
+                { products(page: %d, size: %d) {
+                    content { id name description category price stockQty imageUrl active }
+                    totalPages
+                  }
+                }""".formatted(page, size);
+
+            JsonNode content = postGraphQL(gql).path("data").path("products").path("content");
+            if (content.isMissingNode() || content.isNull()) return List.of();
+            return objectMapper.readValue(content.toString(),
+                    objectMapper.getTypeFactory().constructCollectionType(List.class, Map.class));
+        } catch (Exception e) {
+            log.warn("getAllProducts(graphql) failed page={}: {}", page, e.getMessage());
+            return List.of();
         }
     }
 
