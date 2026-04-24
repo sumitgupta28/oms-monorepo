@@ -23,6 +23,10 @@ spring:
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    consumer:
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      auto-offset-reset: earliest
   graphql:
     graphiql:
       enabled: true
@@ -32,6 +36,8 @@ spring:
       resourceserver:
         jwt:
           issuer-uri: ${KEYCLOAK_ISSUER:http://localhost:8180/realms/oms}
+inventory:
+  low-stock-threshold: ${INVENTORY_LOW_STOCK_THRESHOLD:5}
 management:
   endpoints:
     web:

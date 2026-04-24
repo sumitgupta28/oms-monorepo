@@ -1,5 +1,6 @@
 package com.oms.product.exception;
 
+import com.oms.product.inventory.exception.InventoryException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -10,6 +11,13 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 @Slf4j
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(InventoryException.class)
+    public ProblemDetail handle(InventoryException ex) {
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage());
+        pd.setTitle("Inventory Error");
+        return pd;
+    }
 
     @ExceptionHandler(ProductNotFoundException.class)
     public ProblemDetail notFound(ProductNotFoundException ex) {

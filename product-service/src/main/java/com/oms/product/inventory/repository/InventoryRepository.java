@@ -1,6 +1,6 @@
-package com.oms.inventory.repository;
+package com.oms.product.inventory.repository;
 
-import com.oms.inventory.domain.Inventory;
+import com.oms.product.inventory.domain.Inventory;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
@@ -8,7 +8,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
-public interface InventoryRepository extends JpaRepository<Inventory,String> {
+
+public interface InventoryRepository extends JpaRepository<Inventory, String> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT i FROM Inventory i WHERE i.productId = :id")
     Optional<Inventory> findByIdWithLock(@Param("id") String productId);

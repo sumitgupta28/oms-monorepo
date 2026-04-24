@@ -5,7 +5,6 @@ include 'gateway'
 include 'agent-service'
 include 'order-service'
 include 'payment-service'
-include 'inventory-service'
 include 'product-service'
 include 'notification-service'
 

@@ -1,13 +1,13 @@
-package com.oms.inventory.service;
+package com.oms.product.inventory.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.oms.events.InventoryInsufficientEvent;
 import com.oms.events.InventoryReservedEvent;
-import com.oms.inventory.domain.Inventory;
-import com.oms.inventory.domain.StockMovement;
-import com.oms.inventory.exception.InventoryException;
-import com.oms.inventory.repository.InventoryRepository;
-import com.oms.inventory.repository.StockMovementRepository;
+import com.oms.product.inventory.domain.Inventory;
+import com.oms.product.inventory.domain.StockMovement;
+import com.oms.product.inventory.exception.InventoryException;
+import com.oms.product.inventory.repository.InventoryRepository;
+import com.oms.product.inventory.repository.StockMovementRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -22,9 +22,9 @@ import java.util.UUID;
 @Service @RequiredArgsConstructor @Slf4j
 public class InventoryService {
 
-    private static final String TOPIC_RESERVED    = "oms.inventory.reserved";
+    private static final String TOPIC_RESERVED     = "oms.inventory.reserved";
     private static final String TOPIC_INSUFFICIENT = "oms.inventory.insufficient";
-    private static final String TOPIC_LOW_STOCK   = "oms.inventory.low-stock";
+    private static final String TOPIC_LOW_STOCK    = "oms.inventory.low-stock";
 
     private final InventoryRepository     inventoryRepo;
     private final StockMovementRepository movementRepo;

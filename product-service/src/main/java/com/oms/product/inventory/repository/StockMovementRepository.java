@@ -1,6 +1,6 @@
-package com.oms.inventory.repository;
+package com.oms.product.inventory.repository;
 
-import com.oms.inventory.domain.StockMovement;
+import com.oms.product.inventory.domain.StockMovement;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;

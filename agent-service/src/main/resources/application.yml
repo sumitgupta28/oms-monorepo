@@ -20,7 +20,7 @@ spring:
 services:
   order-url:     ${ORDER_SERVICE_URL:http://order-service:8081}
   payment-url:   ${PAYMENT_SERVICE_URL:http://payment-service:8082}
-  inventory-url: ${INVENTORY_SERVICE_URL:http://inventory-service:8083}
+  inventory-url: ${INVENTORY_SERVICE_URL:http://product-service:8084}
   product-url:   ${PRODUCT_SERVICE_URL:http://product-service:8084}
 management:
   endpoints:

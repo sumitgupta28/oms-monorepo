@@ -43,7 +43,6 @@ services:
       KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET:-gateway-secret-local}
       ORDER_SERVICE_URI: http://order-service:8081
       PAYMENT_SERVICE_URI: http://payment-service:8082
-      INVENTORY_SERVICE_URI: http://inventory-service:8083
       PRODUCT_SERVICE_URI: http://product-service:8084
       AGENT_SERVICE_URI: http://agent-service:8085
     networks:
@@ -115,37 +114,7 @@ services:
       start_period: 30s
 
   # ══════════════════════════════════════════════════════════
-  # INVENTORY SERVICE
-  # ══════════════════════════════════════════════════════════
-  inventory-service:
-    build:
-      context: ./inventory-service
-      dockerfile: Dockerfile
-    container_name: inventory-service
-    ports:
-      - "8083:8083"
-    environment:
-      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-local}
-      SERVER_PORT: 8083
-      KEYCLOAK_ISSUER: http://keycloak:8080/realms/oms
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/inventory
-      SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      INVENTORY_LOW_STOCK_THRESHOLD: ${INVENTORY_LOW_STOCK_THRESHOLD:-5}
-      PRODUCT_SERVICE_URL: http://product-service:8084
-    networks:
-      - oms-network
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:8083/actuator/health || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
-
-  # ══════════════════════════════════════════════════════════
-  # PRODUCT SERVICE  (PostgreSQL + JPA)
+  # PRODUCT SERVICE  (PostgreSQL + JPA) — includes inventory
   # ══════════════════════════════════════════════════════════
   product-service:
     build:
@@ -162,6 +131,7 @@ services:
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      INVENTORY_LOW_STOCK_THRESHOLD: ${INVENTORY_LOW_STOCK_THRESHOLD:-5}
     networks:
       - oms-network
     restart: unless-stopped
@@ -218,7 +188,7 @@ services:
       KEYCLOAK_ISSUER: http://keycloak:8080/realms/oms
       ORDER_SERVICE_URL: http://order-service:8081
       PAYMENT_SERVICE_URL: http://payment-service:8082
-      INVENTORY_SERVICE_URL: http://inventory-service:8083
+      INVENTORY_SERVICE_URL: http://product-service:8084
       PRODUCT_SERVICE_URL: http://product-service:8084
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379

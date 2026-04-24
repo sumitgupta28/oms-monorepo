@@ -1,6 +1,8 @@
 package com.oms.product.config;
 
 import com.oms.product.domain.Product;
+import com.oms.product.inventory.domain.Inventory;
+import com.oms.product.inventory.repository.InventoryRepository;
 import com.oms.product.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -10,6 +12,7 @@ import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Random;
 
 @Component
 @RequiredArgsConstructor
@@ -17,16 +20,37 @@ import java.util.List;
 public class ProductDataInitializer implements ApplicationRunner {
 
     private final ProductRepository productRepository;
+    private final InventoryRepository inventoryRepository;
+
+    private static final Random RANDOM = new Random(42);
 
     @Override
     public void run(ApplicationArguments args) {
-        if (productRepository.count() >= 100) {
+        List<Product> products;
+        if (productRepository.count() < 100) {
+            products = productRepository.saveAll(seedProducts());
+            log.info("Seeded {} products into PostgreSQL", products.size());
+        } else {
             log.info("Products already seeded — skipping initialization");
-            return;
+            products = productRepository.findAll();
         }
 
-        List<Product> saved = productRepository.saveAll(seedProducts());
-        log.info("Seeded {} products into PostgreSQL", saved.size());
+        if (inventoryRepository.count() < 100) {
+            List<Inventory> records = products.stream()
+                .filter(p -> !inventoryRepository.existsById(p.getId()))
+                .map(p -> Inventory.builder()
+                    .productId(p.getId())
+                    .availableQty(10 + RANDOM.nextInt(491))
+                    .reservedQty(0)
+                    .build())
+                .toList();
+            if (!records.isEmpty()) {
+                inventoryRepository.saveAll(records);
+                log.info("Seeded {} inventory records", records.size());
+            }
+        } else {
+            log.info("Inventory already seeded — skipping initialization");
+        }
     }
 
     private static Product p(String name, String description, String category,

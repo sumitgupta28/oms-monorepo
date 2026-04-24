@@ -1,9 +1,9 @@
-package com.oms.inventory.controller;
+package com.oms.product.inventory.controller;
 
-import com.oms.inventory.service.AdjustStockRequest;
-import com.oms.inventory.service.InventoryResponse;
-import com.oms.inventory.service.InventoryService;
-import com.oms.inventory.service.SetStockRequest;
+import com.oms.product.inventory.service.AdjustStockRequest;
+import com.oms.product.inventory.service.InventoryResponse;
+import com.oms.product.inventory.service.InventoryService;
+import com.oms.product.inventory.service.SetStockRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -22,7 +22,9 @@ public class InventoryController {
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public List<InventoryResponse> getAllStock() { return inventoryService.getAllStock(); }
+    public List<InventoryResponse> getAllStock() {
+        return inventoryService.getAllStock();
+    }
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")

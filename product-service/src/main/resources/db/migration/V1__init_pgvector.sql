@@ -1,1 +1,0 @@
--- placeholder migration kept for Flyway version continuity

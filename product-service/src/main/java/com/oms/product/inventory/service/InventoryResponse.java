@@ -1,6 +1,6 @@
-package com.oms.inventory.service;
+package com.oms.product.inventory.service;
 
-import com.oms.inventory.domain.Inventory;
+import com.oms.product.inventory.domain.Inventory;
 
 import java.time.Instant;
 
