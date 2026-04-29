@@ -1,9 +1,9 @@
 package com.oms.product.inventory.controller;
 
-import com.oms.product.inventory.service.AdjustStockRequest;
-import com.oms.product.inventory.service.InventoryResponse;
+import com.oms.product.inventory.dto.AdjustStockRequest;
+import com.oms.product.inventory.dto.InventoryResponse;
+import com.oms.product.inventory.dto.SetStockRequest;
 import com.oms.product.inventory.service.InventoryService;
-import com.oms.product.inventory.service.SetStockRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;

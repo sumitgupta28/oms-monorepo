@@ -1,5 +1,6 @@
 package com.oms.gateway.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -26,10 +27,13 @@ import java.util.stream.Collectors;
 @EnableWebFluxSecurity
 public class SecurityConfig {
 
+    @Value("${app.cors.allowed-origins:http://localhost:3000}")
+    private List<String> allowedOrigins;
+
     @Bean
     public CorsWebFilter corsWebFilter() {
         CorsConfiguration corsConfig = new CorsConfiguration();
-        corsConfig.addAllowedOrigin("http://localhost:3000");
+        corsConfig.setAllowedOrigins(allowedOrigins);
         corsConfig.setMaxAge(3600L);
         corsConfig.addAllowedMethod("*");
         corsConfig.addAllowedHeader("*");
@@ -76,9 +80,9 @@ public class SecurityConfig {
             .authorizeExchange(auth -> auth
                 .pathMatchers("/actuator/health").permitAll()
                 .pathMatchers("/auth/login", "/auth/refresh", "/auth/logout", "/auth/register").permitAll()
-                .pathMatchers("/api/products", "/api/products/**").permitAll()
-                .pathMatchers("/api/chat/**").hasRole("CUSTOMER")
-                .pathMatchers("/api/admin/**").hasRole("ADMIN")
+                .pathMatchers("/api/v1/products", "/api/v1/products/**").permitAll()
+                .pathMatchers("/api/v1/chat/**").hasRole("CUSTOMER")
+                .pathMatchers("/api/v1/admin/**").hasRole("ADMIN")
                 .anyExchange().authenticated()
             )
             .oauth2ResourceServer(oauth2 -> oauth2
@@ -97,7 +101,7 @@ public class SecurityConfig {
             if (rolesObj instanceof List<?>) {
                 roles = ((List<?>) rolesObj).stream()
                     .map(Object::toString)
-                    .collect(Collectors.toList());
+                    .toList();
             } else {
                 roles = List.of();
             }

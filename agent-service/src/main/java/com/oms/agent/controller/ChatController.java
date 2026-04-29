@@ -4,6 +4,7 @@ import com.oms.agent.security.JwtTokenHolder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerSentEvent;
@@ -20,6 +21,7 @@ import reactor.core.publisher.Flux;
 public class ChatController {
 
     private final ChatClient chatClient;
+    private final ChatMemory chatMemory;
 
     private static final String SYSTEM_PROMPT = """
         You are an OMS order management assistant. \
@@ -67,6 +69,7 @@ public class ChatController {
 
     @DeleteMapping("/session/{sessionId}")
     public void clearSession(@PathVariable String sessionId) {
+        chatMemory.clear(sessionId);
         log.info("Session cleared: {}", sessionId);
     }
 }

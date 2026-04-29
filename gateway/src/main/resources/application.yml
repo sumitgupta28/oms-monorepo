@@ -17,30 +17,34 @@ spring:
         - id: agent-service
           uri: ${AGENT_SERVICE_URI:http://agent-service:8085}
           predicates:
-            - Path=/api/chat/**
+            - Path=/api/v1/chat/**
           filters:
-            - StripPrefix=1
+            - StripPrefix=2
 
         - id: order-service
           uri: ${ORDER_SERVICE_URI:http://order-service:8081}
           predicates:
-            - Path=/api/orders/**
+            - Path=/api/v1/orders/**
           filters:
-            - StripPrefix=1
+            - StripPrefix=2
 
         - id: product-service
           uri: ${PRODUCT_SERVICE_URI:http://product-service:8084}
           predicates:
-            - Path=/api/products/**, /api/inventory/**
+            - Path=/api/v1/products/**, /api/v1/inventory/**
           filters:
-            - StripPrefix=1
+            - StripPrefix=2
 
         - id: payment-service
           uri: ${PAYMENT_SERVICE_URI:http://payment-service:8082}
           predicates:
-            - Path=/api/payments/**
+            - Path=/api/v1/payments/**
           filters:
-            - StripPrefix=1
+            - StripPrefix=2
+
+app:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
 
 keycloak:
   url: ${KEYCLOAK_URL:http://keycloak:8180}

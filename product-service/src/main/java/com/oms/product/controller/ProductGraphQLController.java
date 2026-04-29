@@ -1,9 +1,9 @@
 package com.oms.product.controller;
 
+import com.oms.product.dto.ProductResponse;
+import com.oms.product.dto.SearchResponse;
 import com.oms.product.exception.ProductNotFoundException;
-import com.oms.product.service.ProductResponse;
 import com.oms.product.service.ProductService;
-import com.oms.product.service.SearchResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;

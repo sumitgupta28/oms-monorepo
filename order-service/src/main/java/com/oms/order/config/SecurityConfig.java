@@ -6,13 +6,13 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
 
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @Configuration
 @EnableMethodSecurity
@@ -41,10 +41,10 @@ public class SecurityConfig {
             Map<String, Object> realmAccess = jwt.getClaim("realm_access");
             if (realmAccess == null) return List.of();
             List<String> roles = (List<String>) realmAccess.getOrDefault("roles", List.of());
-            log.info("Found realm access roles {}", roles);
+            log.debug("JWT realm_access roles: count={}", roles.size());
             return roles.stream()
-                .map(r -> new SimpleGrantedAuthority("ROLE_" + r))
-                .collect(Collectors.toList());
+                .<GrantedAuthority>map(r -> new SimpleGrantedAuthority("ROLE_" + r))
+                .toList();
         });
         return converter;
     }

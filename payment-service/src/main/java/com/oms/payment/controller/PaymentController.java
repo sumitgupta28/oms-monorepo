@@ -1,7 +1,7 @@
 package com.oms.payment.controller;
 
-import com.oms.payment.service.InitiatePaymentRequest;
-import com.oms.payment.service.PaymentResponse;
+import com.oms.payment.dto.InitiatePaymentRequest;
+import com.oms.payment.dto.PaymentResponse;
 import com.oms.payment.service.PaymentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

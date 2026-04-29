@@ -9,16 +9,21 @@ import com.oms.order.domain.Order;
 import com.oms.order.domain.OrderItem;
 import com.oms.order.domain.OrderStatus;
 import com.oms.order.domain.OutboxEvent;
+import com.oms.order.dto.OrderResponse;
+import com.oms.order.dto.PlaceOrderRequest;
 import com.oms.order.exception.OrderNotFoundException;
 import com.oms.order.exception.OrderStateException;
 import com.oms.order.repository.OrderRepository;
 import com.oms.order.repository.OutboxEventRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -35,6 +40,7 @@ public class OrderService {
     private final OutboxEventRepository  outboxRepository;
     private final ObjectMapper           objectMapper;
     private final KafkaTemplate<String, String> kafkaTemplate;
+    private final TransactionTemplate    transactionTemplate;
 
     // ── Topics ─────────────────────────────────────────────────────────────
     private static final String TOPIC_PLACED    = "oms.orders.placed";
@@ -90,9 +96,8 @@ public class OrderService {
     }
 
     @Transactional(readOnly = true)
-    public List<OrderResponse> getAllOrders() {
-        return orderRepository.findAll()
-            .stream().map(OrderResponse::from).toList();
+    public Page<OrderResponse> getAllOrders(Pageable pageable) {
+        return orderRepository.findAll(pageable).map(OrderResponse::from);
     }
 
     @Transactional(readOnly = true)
@@ -106,10 +111,10 @@ public class OrderService {
 
     // ── Cancel Order ────────────────────────────────────────────────────────
     @Transactional
-    public OrderResponse cancelOrder(UUID orderId, String userId, String reason) {
+    public OrderResponse cancelOrder(UUID orderId, String userId, boolean isAdmin, String reason) {
         Order order = findOrder(orderId);
 
-        if (!order.getUserId().equals(userId)) {
+        if (!isAdmin && !order.getUserId().equals(userId)) {
             throw new OrderStateException("Cannot cancel another user's order");
         }
         if (!order.isCancellable()) {
@@ -168,21 +173,28 @@ public class OrderService {
     }
 
     // ── Outbox Publisher ─────────────────────────────────────────────────────
+    // Fetch and publish are intentionally in separate transactions so the DB
+    // connection is not held open during Kafka I/O.
     @Scheduled(fixedDelay = 5000)
-    @Transactional
     public void publishOutboxEvents() {
-        outboxRepository.findByPublishedFalseOrderByCreatedAtAsc()
-            .forEach(event -> {
-                try {
-                    kafkaTemplate.send(event.getTopic(), event.getPayload()).get(5, TimeUnit.SECONDS);
+        List<OutboxEvent> events = transactionTemplate.execute(
+            status -> outboxRepository.findByPublishedFalseOrderByCreatedAtAsc()
+        );
+        if (events == null || events.isEmpty()) return;
+
+        for (OutboxEvent event : events) {
+            try {
+                kafkaTemplate.send(event.getTopic(), event.getPayload()).get(5, TimeUnit.SECONDS);
+                transactionTemplate.executeWithoutResult(status -> {
                     event.setPublished(true);
                     event.setPublishedAt(Instant.now());
                     outboxRepository.save(event);
-                    log.debug("Published outbox event: {} to {}", event.getEventType(), event.getTopic());
-                } catch (Exception ex) {
-                    log.error("Failed to publish outbox event {}: {}", event.getId(), ex.getMessage());
-                }
-            });
+                });
+                log.debug("Published outbox event: {} to {}", event.getEventType(), event.getTopic());
+            } catch (Exception ex) {
+                log.error("Failed to publish outbox event {}: {}", event.getId(), ex.getMessage());
+            }
+        }
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────

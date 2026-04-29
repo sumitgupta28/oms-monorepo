@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { orderApi, Order } from "../../api/orderApi";
+import { orderApi, Order, OrderPage } from "../../api/orderApi";
 
 function StatusBadge({ status }: { status: string }) {
   const colors: Record<string,string> = {
@@ -14,8 +14,9 @@ function StatusBadge({ status }: { status: string }) {
 
 export default function AdminDashboard() {
   const [filter, setFilter] = useState("all");
-  const { data: orders=[], isLoading } = useQuery({ queryKey:["admin","orders"], queryFn: orderApi.getAllOrders });
+  const { data, isLoading } = useQuery<OrderPage>({ queryKey:["admin","orders"], queryFn: () => orderApi.getAllOrders() });
 
+  const orders = data?.content ?? [];
   const filtered = filter==="all" ? orders : orders.filter((o: Order)=>o.status===filter);
   const revenue  = orders.filter((o: Order)=>o.status==="PAID"||o.status==="SHIPPED"||o.status==="DELIVERED")
     .reduce((s: number,o: Order)=>s+o.totalAmount, 0);
@@ -25,7 +26,7 @@ export default function AdminDashboard() {
       <h1 className="text-2xl font-semibold text-gray-900 mb-6">Admin Dashboard</h1>
       <div className="grid grid-cols-4 gap-4 mb-8">
         {[
-          { label:"Total orders", value: orders.length },
+          { label:"Total orders", value: data?.totalElements ?? 0 },
           { label:"Revenue (paid+)", value: "$"+revenue.toFixed(0) },
           { label:"Pending",  value: orders.filter((o: Order)=>o.status==="PENDING").length },
           { label:"Cancelled", value: orders.filter((o: Order)=>o.status==="CANCELLED").length },

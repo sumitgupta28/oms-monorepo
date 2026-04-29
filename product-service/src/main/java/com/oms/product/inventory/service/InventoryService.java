@@ -3,21 +3,20 @@ package com.oms.product.inventory.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.oms.events.InventoryInsufficientEvent;
 import com.oms.events.InventoryReservedEvent;
+import com.oms.product.inventory.config.InventoryProperties;
 import com.oms.product.inventory.domain.Inventory;
 import com.oms.product.inventory.domain.StockMovement;
+import com.oms.product.inventory.dto.InventoryResponse;
 import com.oms.product.inventory.exception.InventoryException;
 import com.oms.product.inventory.repository.InventoryRepository;
 import com.oms.product.inventory.repository.StockMovementRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Service @RequiredArgsConstructor @Slf4j
 public class InventoryService {
@@ -30,12 +29,13 @@ public class InventoryService {
     private final StockMovementRepository movementRepo;
     private final KafkaTemplate<String, String> kafka;
     private final ObjectMapper objectMapper;
-
-    @Value("${inventory.low-stock-threshold:5}") private int lowStockThreshold;
+    private final InventoryProperties inventoryProperties;
 
     @Transactional
     public void reserveStock(UUID orderId, List<ReserveItem> items) {
-        List<String> reserved = new ArrayList<>();
+        // Phase 1: acquire locks and verify all items have sufficient stock before reserving any.
+        // This prevents partial reservations where some items succeed before an insufficiency is found.
+        Map<String, Inventory> locked = new LinkedHashMap<>();
         for (ReserveItem item : items) {
             Inventory inv = inventoryRepo.findByIdWithLock(item.productId())
                 .orElseThrow(() -> new InventoryException("Product not found: " + item.productId()));
@@ -46,6 +46,13 @@ public class InventoryService {
                 log.warn("Insufficient stock for order {} product {}", orderId, item.productId());
                 return;
             }
+            locked.put(item.productId(), inv);
+        }
+
+        // Phase 2: all items available — reserve them all
+        List<String> reserved = new ArrayList<>();
+        for (ReserveItem item : items) {
+            Inventory inv = locked.get(item.productId());
             inv.reserve(item.quantity());
             inventoryRepo.save(inv);
             movementRepo.save(StockMovement.builder()
@@ -55,15 +62,7 @@ public class InventoryService {
                 .orderId(orderId)
                 .build());
             reserved.add(item.productId());
-            if (inv.getAvailableQty() <= lowStockThreshold) {
-                try {
-                    kafka.send(TOPIC_LOW_STOCK, objectMapper.writeValueAsString(
-                        java.util.Map.of("productId", item.productId(),
-                            "availableQty", inv.getAvailableQty())));
-                } catch (Exception e) {
-                    log.warn("Failed to publish low-stock alert for {}: {}", item.productId(), e.getMessage());
-                }
-            }
+            publishLowStockAlertIfNeeded(item.productId(), inv.getAvailableQty());
         }
         publishEvent(TOPIC_RESERVED, new InventoryReservedEvent(orderId, reserved));
         log.info("Inventory reserved for order {}", orderId);
@@ -136,6 +135,17 @@ public class InventoryService {
     @Transactional(readOnly = true)
     public List<InventoryResponse> getAllStock() {
         return inventoryRepo.findAll().stream().map(InventoryResponse::from).toList();
+    }
+
+    private void publishLowStockAlertIfNeeded(String productId, int availableQty) {
+        if (availableQty <= inventoryProperties.lowStockThreshold()) {
+            try {
+                kafka.send(TOPIC_LOW_STOCK, objectMapper.writeValueAsString(
+                    Map.of("productId", productId, "availableQty", availableQty)));
+            } catch (Exception e) {
+                log.warn("Failed to publish low-stock alert for {}: {}", productId, e.getMessage());
+            }
+        }
     }
 
     private void publishEvent(String topic, Object event) {
