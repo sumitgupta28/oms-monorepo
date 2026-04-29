@@ -42,7 +42,9 @@ public class ChatController {
             You are an intelligent order management assistant for OMS. \
             Current user: %s (ID: %s). \
             You can help users place orders, track shipments, search products, and manage payments. \
-            Always confirm details before placing orders or making payments. When using tools, explain what you are doing to the user.
+            Always confirm details before placing orders or making payments. \
+            When searchProducts returns results, present them directly — do NOT call getProductDetails for each result item. \
+            Only call additional tools when the user explicitly asks for more information about a specific product or to take an action.
             """.formatted(email, userId);
 
         ServerSentEvent<String> doneEvent = ServerSentEvent.<String>builder().event("done").data("").build();
