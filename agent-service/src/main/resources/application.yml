@@ -11,6 +11,11 @@ spring:
       - org.springframework.ai.model.ollama.autoconfigure.OllamaApiAutoConfiguration
       - org.springframework.ai.model.ollama.autoconfigure.OllamaChatAutoConfiguration
       - org.springframework.ai.model.ollama.autoconfigure.OllamaEmbeddingAutoConfiguration
+      - org.springframework.ai.vectorstore.pgvector.autoconfigure.PgVectorStoreAutoConfiguration
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/agent}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
   data:
     redis:
       host: ${REDIS_HOST:localhost}
@@ -22,13 +27,6 @@ spring:
       auto-offset-reset: latest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-  ai:
-    vectorstore:
-      redis:
-        index: product-embeddings
-        prefix: "product:"
-        initialize-schema: true
-
   security:
     oauth2:
       resourceserver:
@@ -49,3 +47,14 @@ management:
     web:
       exposure:
         include: health,prometheus,metrics
+
+logging:
+  level:
+    com.oms.agent.aspect: debug
+    org.springframework.web: TRACE
+    org.springframework.ai: TRACE
+    org.springframework.web.client: TRACE
+
+
+
+    # 39522

@@ -4,12 +4,12 @@ import org.springframework.ai.ollama.OllamaEmbeddingModel;
 import org.springframework.ai.ollama.api.OllamaApi;
 import org.springframework.ai.ollama.api.OllamaEmbeddingOptions;
 import org.springframework.ai.vectorstore.VectorStore;
-import org.springframework.ai.vectorstore.redis.RedisVectorStore;
+import org.springframework.ai.vectorstore.pgvector.PgVectorStore;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import redis.clients.jedis.JedisPooled;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 @Configuration
 public class EmbeddingConfig {
@@ -19,12 +19,6 @@ public class EmbeddingConfig {
 
     @Value("${embedding.ollama.model:nomic-embed-text}")
     private String embeddingModel;
-
-    @Value("${spring.data.redis.host:localhost}")
-    private String redisHost;
-
-    @Value("${spring.data.redis.port:6379}")
-    private int redisPort;
 
     @Bean("embeddingOllamaApi")
     public OllamaApi embeddingOllamaApi() {
@@ -40,16 +34,11 @@ public class EmbeddingConfig {
     }
 
     @Bean
-    public JedisPooled jedisPooled() {
-        return new JedisPooled(redisHost, redisPort);
-    }
-
-    @Bean
-    public VectorStore vectorStore(JedisPooled jedisPooled, OllamaEmbeddingModel ollamaEmbeddingModel) {
-        return RedisVectorStore.builder(jedisPooled, ollamaEmbeddingModel)
-                .indexName("product-embeddings")
-                .prefix("product:")
-                .initializeSchema(true)
+    public VectorStore vectorStore(JdbcTemplate jdbcTemplate, OllamaEmbeddingModel ollamaEmbeddingModel) {
+        return PgVectorStore.builder(jdbcTemplate, ollamaEmbeddingModel)
+                .dimensions(768) // nomic-embed-text produces 768-dimensional vectors
+                .distanceType(PgVectorStore.PgDistanceType.COSINE_DISTANCE)
+                .indexType(PgVectorStore.PgIndexType.HNSW)
                 .build();
     }
 }

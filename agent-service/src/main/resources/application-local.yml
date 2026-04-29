@@ -1,6 +1,8 @@
 server:
   port: 8085
 spring:
+  main:
+    allow-bean-definition-overriding: true
   application:
     name: agent-service
   autoconfigure:
@@ -9,6 +11,23 @@ spring:
       - org.springframework.ai.model.ollama.autoconfigure.OllamaApiAutoConfiguration
       - org.springframework.ai.model.ollama.autoconfigure.OllamaChatAutoConfiguration
       - org.springframework.ai.model.ollama.autoconfigure.OllamaEmbeddingAutoConfiguration
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9094}
+    consumer:
+      group-id: agent-service
+      auto-offset-reset: latest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+  ai:
+    vectorstore:
+      redis:
+        index: product-embeddings
+        prefix: "product:"
+        initialize-schema: true
 
   security:
     oauth2:
@@ -18,8 +37,13 @@ spring:
 services:
   order-url:     ${ORDER_SERVICE_URL:http://localhost:8081}
   payment-url:   ${PAYMENT_SERVICE_URL:http://localhost:8082}
-  inventory-url: ${INVENTORY_SERVICE_URL:http://localhost:8083}
+  inventory-url: ${INVENTORY_SERVICE_URL:http://localhost:8084}
   product-url:   ${PRODUCT_SERVICE_URL:http://localhost:8084}
+embedding:
+  ollama:
+    base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
+    model: ${EMBEDDING_MODEL:nomic-embed-text}
+
 management:
   endpoints:
     web:
