@@ -31,6 +31,7 @@ public class AnthropicChatModelConfig {
         AnthropicChatOptions options = AnthropicChatOptions.builder()
                 .model(model)
                 .maxTokens(maxTokens)
+                .temperature(0.3)
                 .build();
 
         return AnthropicChatModel.builder()

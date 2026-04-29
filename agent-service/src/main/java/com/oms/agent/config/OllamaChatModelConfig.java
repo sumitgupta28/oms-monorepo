@@ -31,9 +31,9 @@ public class OllamaChatModelConfig {
                 .build();
 
         OllamaChatOptions options = OllamaChatOptions.builder()
-                .logitsAll(true)
                 .model(model)
                 .numPredict(numPredict)
+                .temperature(0.3)
                 .build();
 
         OllamaChatModel ollamaChatModel = OllamaChatModel.builder()

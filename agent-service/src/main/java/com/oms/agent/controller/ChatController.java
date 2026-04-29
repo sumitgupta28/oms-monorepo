@@ -21,6 +21,16 @@ public class ChatController {
 
     private final ChatClient chatClient;
 
+    private static final String SYSTEM_PROMPT = """
+        You are an OMS order management assistant. \
+        Help users search products, place orders, track shipments, and manage payments. \
+        Workflow rules: \
+        (1) For product queries: call searchProducts ONCE and present results directly. \
+        (2) For orders: validateStock → placeOrder → initiatePayment, in that sequence. \
+        (3) Always confirm order and payment details with the user before executing. \
+        (4) Use the userId already provided in the user context for all order/payment operations — never ask the user for it.\
+        """;
+
     @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<ServerSentEvent<String>> stream(
         @RequestParam String message,
@@ -38,20 +48,13 @@ public class ChatController {
         String email  = jwt.getClaimAsString("email");
         log.info("Chat request from user {} (email: {}) session {}", userId, email, sessionId);
 
-        String systemPrompt = """
-            You are an intelligent order management assistant for OMS. \
-            Current user: %s (ID: %s). \
-            You can help users place orders, track shipments, search products, and manage payments. \
-            Always confirm details before placing orders or making payments. \
-            When searchProducts returns results, present them directly — do NOT call getProductDetails for each result item. \
-            Only call additional tools when the user explicitly asks for more information about a specific product or to take an action.
-            """.formatted(email, userId);
+        String contextualMessage = "[User: " + email + " | ID: " + userId + "] " + message;
 
         ServerSentEvent<String> doneEvent = ServerSentEvent.<String>builder().event("done").data("").build();
 
         return chatClient.prompt()
-                .system(systemPrompt)
-                .user(message)
+                .system(SYSTEM_PROMPT)
+                .user(contextualMessage)
                 .advisors(a -> a.param("chat_memory_conversation_id", sessionId))
                 .stream()
                 .content()

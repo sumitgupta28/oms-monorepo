@@ -2,4 +2,4 @@ ai:
   anthropic:
     api-key: ${ANTHROPIC_API_KEY:}
     model: ${AI_MODEL:claude-sonnet-4-6}
-    max-tokens: ${AI_MAX_TOKENS:4096}
+    max-tokens: ${AI_MAX_TOKENS:1500}
