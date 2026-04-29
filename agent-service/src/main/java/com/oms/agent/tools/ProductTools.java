@@ -5,6 +5,7 @@ import com.oms.agent.embedding.ProductIndexingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.tool.annotation.Tool;
+import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -18,8 +19,11 @@ public class ProductTools {
     @Tool(description = "Search for products by any natural-language query (synonyms, descriptions, categories). " +
           "Returns a list of matching products — each item already includes id, name, category, price, stockQty, imageUrl, and active status. " +
           "DO NOT call getProductDetails for items in these results; the data is complete. " +
-          "Pass null for price bounds that are not mentioned.")
-    public String searchProducts(String query, Double minPrice, Double maxPrice) {
+          "Omit minPrice and maxPrice entirely if no price filter is needed.")
+    public String searchProducts(
+            String query,
+            @ToolParam(required = false, description = "Minimum price filter. Omit if no lower price bound is needed.") Double minPrice,
+            @ToolParam(required = false, description = "Maximum price filter. Omit if no upper price bound is needed.") Double maxPrice) {
         log.info("Tool invoked: searchProducts(query={}, minPrice={}, maxPrice={})", query, minPrice, maxPrice);
         return productIndexingService.semanticSearch(query, minPrice, maxPrice, 15);
     }

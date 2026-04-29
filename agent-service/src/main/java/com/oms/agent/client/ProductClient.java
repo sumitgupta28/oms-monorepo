@@ -27,8 +27,8 @@ public class ProductClient {
         log.info("searchProducts(graphql): query={} minPrice={} maxPrice={}", query, minPrice, maxPrice);
         try {
             StringBuilder args = new StringBuilder("query: ").append(jsonStr(query));
-            if (minPrice != null) args.append(", minPrice: ").append(jsonStr(minPrice.toString()));
-            if (maxPrice != null) args.append(", maxPrice: ").append(jsonStr(maxPrice.toString()));
+            if (minPrice != null) args.append(", minPrice: ").append(minPrice);
+            if (maxPrice != null) args.append(", maxPrice: ").append(maxPrice);
 
             String gql = """
                 { searchProducts(%s) {
