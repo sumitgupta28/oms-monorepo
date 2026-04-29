@@ -39,6 +39,7 @@ public class EmbeddingConfig {
                 .dimensions(768) // nomic-embed-text produces 768-dimensional vectors
                 .distanceType(PgVectorStore.PgDistanceType.COSINE_DISTANCE)
                 .indexType(PgVectorStore.PgIndexType.HNSW)
+                .initializeSchema(true)
                 .build();
     }
 }
