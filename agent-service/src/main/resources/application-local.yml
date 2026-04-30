@@ -1,8 +1,6 @@
 server:
   port: 8085
 spring:
-  main:
-    allow-bean-definition-overriding: true
   application:
     name: agent-service
   autoconfigure:
@@ -22,13 +20,6 @@ spring:
       auto-offset-reset: latest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-  ai:
-    vectorstore:
-      redis:
-        index: product-embeddings
-        prefix: "product:"
-        initialize-schema: true
-
   security:
     oauth2:
       resourceserver:

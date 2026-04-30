@@ -29,7 +29,7 @@ public class ProductIndexingService {
     @Async
     @EventListener(ApplicationReadyEvent.class)
     public void indexAllProducts() {
-        log.info("Starting full product index into Redis vector store");
+        log.info("Starting full product index into PgVector store");
         try {
             List<Document> allDocs = new ArrayList<>();
             int page = 0;
@@ -43,7 +43,7 @@ public class ProductIndexingService {
             }
             if (!allDocs.isEmpty()) {
                 vectorStore.add(allDocs);
-                log.info("Indexed {} products into Redis vector store", allDocs.size());
+                log.info("Indexed {} products into PgVector store", allDocs.size());
             } else {
                 log.warn("No products found to index — semantic search will fall back to keyword search until products are available");
             }
