@@ -3,6 +3,8 @@ server:
 spring:
   application:
     name: agent-service
+  main:
+    allow-bean-definition-overriding: true
   profiles:
     active: ${AI_PROVIDER:ollama}
   autoconfigure:
