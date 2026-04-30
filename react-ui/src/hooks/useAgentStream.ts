@@ -12,6 +12,8 @@ export function useAgentStream() {
     const token = localStorage.getItem("access_token");
     if (!token) return;
 
+    esRef.current?.close();
+
     setMessages(prev => [...prev, { role: "user", content: text }]);
     setMessages(prev => [...prev, { role: "assistant", content: "", toolCalls: [] }]);
     setStreaming(true);

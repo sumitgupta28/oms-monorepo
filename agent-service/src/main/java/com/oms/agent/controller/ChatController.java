@@ -13,6 +13,9 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Sinks;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/chat")
@@ -54,13 +57,22 @@ public class ChatController {
 
         ServerSentEvent<String> doneEvent = ServerSentEvent.<String>builder().event("done").data("").build();
 
-        return chatClient.prompt()
+        Sinks.Many<String> toolSink = Sinks.many().unicast().onBackpressureBuffer();
+
+        Flux<ServerSentEvent<String>> toolEvents = toolSink.asFlux()
+                .map(name -> ServerSentEvent.<String>builder().event("tool-call").data(name).build());
+
+        Flux<ServerSentEvent<String>> contentEvents = chatClient.prompt()
                 .system(SYSTEM_PROMPT)
                 .user(contextualMessage)
                 .advisors(a -> a.param("chat_memory_conversation_id", sessionId))
+                .toolContext(Map.of("toolCallSink", toolSink))
                 .stream()
                 .content()
                 .map(content -> ServerSentEvent.<String>builder().data(content).build())
+                .doFinally(signal -> toolSink.tryEmitComplete());
+
+        return Flux.merge(toolEvents, contentEvents)
                 .concatWith(Flux.just(doneEvent))
                 .doOnError(error -> log.error("Stream error: {}", error.getMessage()))
                 .onErrorResume(error -> Flux.just(doneEvent))

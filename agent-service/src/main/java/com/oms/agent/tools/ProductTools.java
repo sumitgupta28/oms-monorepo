@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
+import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -23,13 +24,16 @@ public class ProductTools {
     public String searchProducts(
             String query,
             @ToolParam(required = false, description = "Minimum price filter. Omit if no lower price bound is needed.") Double minPrice,
-            @ToolParam(required = false, description = "Maximum price filter. Omit if no upper price bound is needed.") Double maxPrice) {
+            @ToolParam(required = false, description = "Maximum price filter. Omit if no upper price bound is needed.") Double maxPrice,
+            ToolContext toolContext) {
+        ToolContextHelper.emitToolCall(toolContext, "searchProducts");
         log.info("Tool invoked: searchProducts(query={}, minPrice={}, maxPrice={})", query, minPrice, maxPrice);
         return productIndexingService.semanticSearch(query, minPrice, maxPrice, 15);
     }
 
     @Tool(description = "Fetch full details for ONE specific product when the user explicitly asks about a single product by name or ID. Do not call this for products already returned by searchProducts.")
-    public String getProductDetails(String productId) {
+    public String getProductDetails(String productId, ToolContext toolContext) {
+        ToolContextHelper.emitToolCall(toolContext, "getProductDetails");
         log.info("Tool invoked: getProductDetails(productId={})", productId);
         return productClient.getProductDetails(productId);
     }

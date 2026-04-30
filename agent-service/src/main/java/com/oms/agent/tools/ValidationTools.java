@@ -3,6 +3,7 @@ import com.oms.agent.client.InventoryClient;
 import lombok.RequiredArgsConstructor;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
+import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.stereotype.Component;
 
 @Component @RequiredArgsConstructor
@@ -13,7 +14,9 @@ public class ValidationTools {
           "Always call this before placeOrder. Returns available quantity and whether the request can be fulfilled.")
     public String validateStock(
             @ToolParam(description = "Product ID from searchProducts results") String productId,
-            @ToolParam(description = "Quantity the user wants to order") int requestedQty) {
+            @ToolParam(description = "Quantity the user wants to order") int requestedQty,
+            ToolContext toolContext) {
+        ToolContextHelper.emitToolCall(toolContext, "validateStock");
         return inventoryClient.validateStock(productId, requestedQty);
     }
 }
